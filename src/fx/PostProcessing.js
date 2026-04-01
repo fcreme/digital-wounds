@@ -65,6 +65,35 @@ const FilmShader = {
   `,
 };
 
+// Bloodborne cold color grade — cold blue shadows, muted highlights
+const ColdGradeShader = {
+  uniforms: {
+    tDiffuse: { value: null },
+  },
+  vertexShader: /* glsl */ `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: /* glsl */ `
+    uniform sampler2D tDiffuse;
+    varying vec2 vUv;
+    void main() {
+      vec4 color = texture2D(tDiffuse, vUv);
+      float lum = dot(color.rgb, vec3(0.299, 0.587, 0.114));
+
+      // Cold shadows (push darks toward blue)
+      vec3 coldShadow = color.rgb + vec3(-0.06, -0.02, 0.10) * (1.0 - lum);
+      // Muted highlights (slightly warm to preserve lantern contrast)
+      vec3 mutedHighlight = coldShadow + vec3(0.03, 0.02, -0.02) * lum;
+
+      gl_FragColor = vec4(mutedHighlight, color.a);
+    }
+  `,
+};
+
 export default class PostProcessing {
   constructor(renderer, scene, camera) {
     this._renderer = renderer;
@@ -80,37 +109,41 @@ export default class PostProcessing {
     this._psxColor.uniforms.resolution.value.set(size.x, size.y);
     this._composer.addPass(this._psxColor);
 
-    // 3. Bloom — warm light glow
+    // 3. Bloom — stronger, wider glow for moonlit atmosphere
     this._bloom = new UnrealBloomPass(
       new THREE.Vector2(size.x, size.y),
-      0.45,  // strength
-      0.9,   // radius
-      0.5    // threshold
+      0.70,  // strength
+      1.0,   // radius
+      0.30   // threshold
     );
     this._composer.addPass(this._bloom);
 
-    // 4. Desaturation — slight PS1 muted palette
+    // 4. Cold color grade — Bloodborne cold shadow / muted highlight split
+    this._coldGrade = new ShaderPass(ColdGradeShader);
+    this._composer.addPass(this._coldGrade);
+
+    // 5. Desaturation — more muted for gothic atmosphere
     this._desat = new ShaderPass(DesaturationShader);
-    this._desat.uniforms.amount.value = 0.2;
+    this._desat.uniforms.amount.value = 0.18;
     this._composer.addPass(this._desat);
 
-    // 5. Scanlines
+    // 6. Scanlines
     this._scanlines = new ShaderPass(ScanlineShader);
     this._scanlines.uniforms.scanlineCount.value = size.y;
     this._composer.addPass(this._scanlines);
 
-    // 6. Vignette — subtle edge darkening only
+    // 7. Vignette — darker edges for gothic framing
     this._vignette = new ShaderPass(VignetteShader);
-    this._vignette.uniforms.offset.value = 1.0;
-    this._vignette.uniforms.darkness.value = 0.6;
+    this._vignette.uniforms.offset.value = 0.9;
+    this._vignette.uniforms.darkness.value = 0.72;
     this._composer.addPass(this._vignette);
 
-    // 7. Film grain
+    // 8. Film grain — stronger for gritty atmosphere
     this._film = new ShaderPass(FilmShader);
-    this._film.uniforms.intensity.value = 0.02;
+    this._film.uniforms.intensity.value = 0.025;
     this._composer.addPass(this._film);
 
-    // 8. Output
+    // 9. Output
     this._composer.addPass(new OutputPass());
   }
 

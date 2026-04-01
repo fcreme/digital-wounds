@@ -8,6 +8,7 @@ import WorldManager from './world/WorldManager.js';
 import ArtistStationLoader from './world/ArtistStationLoader.js';
 import ParticleSystem from './fx/ParticleSystem.js';
 import Fireflies from './fx/Fireflies.js';
+import FallingLeaves from './fx/FallingLeaves.js';
 import AudioSystem from './fx/AudioSystem.js';
 import UIOverlay from './ui/UIOverlay.js';
 import LoadingScreen from './ui/LoadingScreen.js';
@@ -22,6 +23,7 @@ class App {
     this.stationLoader = null;
     this.particles = null;
     this.fireflies = null;
+    this.fallingLeaves = null;
     this.audio = null;
     this.ui = null;
     this.loading = null;
@@ -71,6 +73,10 @@ class App {
     // Fireflies
     this.fireflies = new Fireflies(this.engine.scene);
     this.fireflies.build(pathCurve);
+
+    // Falling Leaves
+    this.fallingLeaves = new FallingLeaves(this.engine.scene);
+    this.fallingLeaves.build(this.engine.camera.position);
 
     // Audio
     this.audio = new AudioSystem(this.engine.camera);
@@ -302,8 +308,14 @@ class App {
     // Particles
     this.particles.update(delta, elapsed, this.engine.camera.position);
 
+    // World (FlickerLights)
+    this.world.update(delta, elapsed);
+
     // Fireflies
     this.fireflies.update(delta, elapsed);
+
+    // Falling Leaves
+    this.fallingLeaves.update(delta, elapsed, this.engine.camera.position);
 
     // Audio
     this.audio.update(delta);

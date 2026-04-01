@@ -19,6 +19,8 @@ export default class HotelHallway {
   }
 
   async build(pathCurve) {
+    // Disabled — debug rotation grid; keeping class for future corridor use
+    return;
     const fullModel = await loadFBX('/models/hotel/hotel_hallway3.fbx');
 
     // Extract corridor pieces

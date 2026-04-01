@@ -1,14 +1,14 @@
 import * as THREE from 'three';
 
-// --- PSX Constants ---
+// --- PSX Constants (tuned for Bloodborne gothic look) ---
 export const PSX_RENDER_HEIGHT = 480;
-export const PSX_FOG_DENSITY = 0.018;
-export const PSX_CAMERA_FAR = 120;
-export const PSX_EXPOSURE = 1.4;
-export const PSX_GRID_RESOLUTION = 320.0;
-export const PSX_COLOR_DEPTH = 64.0;
-export const PSX_DITHER_STRENGTH = 0.012;
-export const PSX_SCANLINE_INTENSITY = 0.04;
+export const PSX_FOG_DENSITY = 0.012;
+export const PSX_CAMERA_FAR = 150;
+export const PSX_EXPOSURE = 1.15;
+export const PSX_GRID_RESOLUTION = 800.0;
+export const PSX_COLOR_DEPTH = 80.0;
+export const PSX_DITHER_STRENGTH = 0.008;
+export const PSX_SCANLINE_INTENSITY = 0.015;
 
 /**
  * Patches any Three.js material (Lambert, Phong, Standard) with PS1 vertex jitter.

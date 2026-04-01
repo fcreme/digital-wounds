@@ -1,6 +1,7 @@
 import * as THREE from 'three';
-import { randomRange } from '../utils/math.js';
+import { randomRange, displaceGeometryVertices } from '../utils/math.js';
 import { patchMaterial } from '../fx/PSXEffect.js';
+import { createBarkTexture, createFoliageTexture, createDeadWoodTexture } from '../utils/ProceduralTextures.js';
 
 export default class ForestGenerator {
   constructor(scene) {
@@ -10,14 +11,15 @@ export default class ForestGenerator {
   }
 
   build(pathCurve) {
-    const treeCount = 300;
+    const treeCount = 350;
     const variants = this._createTreeVariants();
 
-    // Distribute counts across variants
+    // Distribute counts across 4 variants
     const counts = [
-      Math.floor(treeCount * 0.4),  // tall thin pines
-      Math.floor(treeCount * 0.35), // medium dead trees
-      treeCount - Math.floor(treeCount * 0.4) - Math.floor(treeCount * 0.35), // gnarled
+      Math.floor(treeCount * 0.35),  // tall thin pines
+      Math.floor(treeCount * 0.28),  // dead trees
+      Math.floor(treeCount * 0.27),  // gnarled
+      treeCount - Math.floor(treeCount * 0.35) - Math.floor(treeCount * 0.28) - Math.floor(treeCount * 0.27), // birch/forked (~35)
     ];
 
     // Generate positions avoiding the path
@@ -27,13 +29,10 @@ export default class ForestGenerator {
     }
 
     for (let v = 0; v < variants.length; v++) {
-      const { geometry, material } = variants[v];
+      const variant = variants[v];
       const count = counts[v];
-      const instanced = new THREE.InstancedMesh(geometry, material, count);
-      instanced.castShadow = true;
-      instanced.receiveShadow = true;
-      instanced.name = `trees-variant-${v}`;
 
+      const matrices = [];
       const dummy = new THREE.Object3D();
       let placed = 0;
 
@@ -41,12 +40,11 @@ export default class ForestGenerator {
         const x = randomRange(-90, 90);
         const z = randomRange(-90, 90);
 
-        // Check distance from path
         let tooClose = false;
         for (const pp of pathSamplePoints) {
           const dx = x - pp.x;
           const dz = z - pp.z;
-          if (dx * dx + dz * dz < 12) { // ~3.5 unit radius
+          if (dx * dx + dz * dz < 12) {
             tooClose = true;
             break;
           }
@@ -58,95 +56,252 @@ export default class ForestGenerator {
         const scale = randomRange(0.7, 1.3);
         dummy.scale.set(scale, scale * randomRange(0.8, 1.2), scale);
         dummy.updateMatrix();
-        instanced.setMatrixAt(placed, dummy.matrix);
+        matrices.push(dummy.matrix.clone());
         placed++;
       }
 
-      instanced.instanceMatrix.needsUpdate = true;
-      this.scene.add(instanced);
-      this.instancedMeshes.push(instanced);
+      for (const part of variant) {
+        const instanced = new THREE.InstancedMesh(part.geometry, part.material, count);
+        instanced.castShadow = true;
+        instanced.receiveShadow = true;
+        instanced.name = part.name;
+
+        for (let i = 0; i < matrices.length; i++) {
+          instanced.setMatrixAt(i, matrices[i]);
+        }
+
+        instanced.instanceMatrix.needsUpdate = true;
+        this.scene.add(instanced);
+        this.instancedMeshes.push(instanced);
+      }
     }
 
-    // Create invisible collision cylinders for trees nearest to the path
     this._createColliders(pathCurve);
-
     return this._colliders;
   }
 
   _createTreeVariants() {
-    // Variant 0: Tall pine tree
-    const pine = this._createPineGeometry();
-    const pineMat = new THREE.MeshLambertMaterial({ color: 0x3a5540 });
-    patchMaterial(pineMat);
+    const barkTex = createBarkTexture(128, 256);
+    const foliageTex = createFoliageTexture(128);
+    const deadWoodTex = createDeadWoodTexture(128);
 
-    // Variant 1: Dead tree (trunk only, no leaves)
+    // Variant 0: Tall pine — warm brown trunk + cool green canopy
+    const pineTrunk = this._createPineTrunkGeometry();
+    const pineTrunkMat = new THREE.MeshStandardMaterial({
+      map: barkTex,
+      color: 0x7a5540,
+      roughness: 0.9,
+      metalness: 0,
+    });
+    patchMaterial(pineTrunkMat);
+
+    const pineCanopy = this._createPineCanopyGeometry();
+    const pineCanopyMat = new THREE.MeshStandardMaterial({
+      map: foliageTex,
+      color: 0x2a5538,
+      roughness: 0.85,
+      metalness: 0,
+    });
+    patchMaterial(pineCanopyMat);
+
+    // Variant 1: Dead tree — pale grey
     const dead = this._createDeadTreeGeometry();
-    const deadMat = new THREE.MeshLambertMaterial({ color: 0x5a4535 });
+    this._computeCylindricalUVs(dead);
+    const deadMat = new THREE.MeshStandardMaterial({
+      map: deadWoodTex,
+      color: 0x807060,
+      roughness: 0.9,
+      metalness: 0,
+    });
     patchMaterial(deadMat);
 
-    // Variant 2: Gnarled thick tree
-    const gnarled = this._createGnarledGeometry();
-    const gnarledMat = new THREE.MeshLambertMaterial({ color: 0x4a3e30 });
-    patchMaterial(gnarledMat);
+    // Variant 2: Gnarled thick tree — dark trunk + warm green canopy
+    const gnarledTrunk = this._createGnarledTrunkGeometry();
+    const gnarledTrunkMat = new THREE.MeshStandardMaterial({
+      map: barkTex,
+      color: 0x4a3520,
+      roughness: 0.9,
+      metalness: 0,
+    });
+    patchMaterial(gnarledTrunkMat);
+
+    const gnarledCanopy = this._createGnarledCanopyGeometry();
+    const gnarledCanopyMat = new THREE.MeshStandardMaterial({
+      map: foliageTex,
+      color: 0x3a5830,
+      roughness: 0.85,
+      metalness: 0,
+    });
+    patchMaterial(gnarledCanopyMat);
+
+    // Variant 3: Birch/forked tree — lighter silver trunk, no canopy
+    const birch = this._createBirchGeometry();
+    this._computeCylindricalUVs(birch);
+    const birchMat = new THREE.MeshStandardMaterial({
+      map: barkTex,
+      color: 0x8a8070,
+      roughness: 0.85,
+      metalness: 0,
+    });
+    patchMaterial(birchMat);
 
     return [
-      { geometry: pine, material: pineMat },
-      { geometry: dead, material: deadMat },
-      { geometry: gnarled, material: gnarledMat },
+      [
+        { geometry: pineTrunk, material: pineTrunkMat, name: 'trees-pine-trunk' },
+        { geometry: pineCanopy, material: pineCanopyMat, name: 'trees-pine-canopy' },
+      ],
+      [
+        { geometry: dead, material: deadMat, name: 'trees-dead' },
+      ],
+      [
+        { geometry: gnarledTrunk, material: gnarledTrunkMat, name: 'trees-gnarled-trunk' },
+        { geometry: gnarledCanopy, material: gnarledCanopyMat, name: 'trees-gnarled-canopy' },
+      ],
+      [
+        { geometry: birch, material: birchMat, name: 'trees-birch' },
+      ],
     ];
   }
 
-  _createPineGeometry() {
-    const group = new THREE.BufferGeometry();
-
-    // Trunk
-    const trunk = new THREE.CylinderGeometry(0.12, 0.18, 6, 6);
+  _createPineTrunkGeometry() {
+    const trunk = new THREE.CylinderGeometry(0.12, 0.18, 6, 8, 4);
     trunk.translate(0, 3, 0);
+    displaceGeometryVertices(trunk, 0.02);
+    this._computeCylindricalUVs(trunk);
+    return trunk;
+  }
 
-    // Foliage layers
-    const foliage1 = new THREE.ConeGeometry(1.8, 3, 6);
+  _createPineCanopyGeometry() {
+    const foliage1 = new THREE.ConeGeometry(1.8, 3, 8);
     foliage1.translate(0, 5.5, 0);
+    displaceGeometryVertices(foliage1, 0.15);
 
-    const foliage2 = new THREE.ConeGeometry(1.4, 2.5, 6);
+    const foliage2 = new THREE.ConeGeometry(1.4, 2.5, 8);
     foliage2.translate(0, 7, 0);
+    displaceGeometryVertices(foliage2, 0.12);
 
-    const foliage3 = new THREE.ConeGeometry(0.9, 2, 6);
+    const foliage3 = new THREE.ConeGeometry(0.9, 2, 8);
     foliage3.translate(0, 8.2, 0);
+    displaceGeometryVertices(foliage3, 0.08);
 
-    return this._mergeGeometries([trunk, foliage1, foliage2, foliage3]);
+    const merged = this._mergeGeometries([foliage1, foliage2, foliage3]);
+    this._computeSphericalUVs(merged);
+    return merged;
   }
 
   _createDeadTreeGeometry() {
-    // Trunk with taper
-    const trunk = new THREE.CylinderGeometry(0.08, 0.22, 5, 5);
+    const trunk = new THREE.CylinderGeometry(0.08, 0.22, 5, 8, 3);
     trunk.translate(0, 2.5, 0);
+    displaceGeometryVertices(trunk, 0.02);
 
-    // Branches (angled cylinders)
-    const branch1 = new THREE.CylinderGeometry(0.03, 0.06, 2, 4);
+    const branch1 = new THREE.CylinderGeometry(0.03, 0.06, 2, 6);
     branch1.rotateZ(Math.PI / 4);
     branch1.translate(0.8, 3.5, 0);
 
-    const branch2 = new THREE.CylinderGeometry(0.03, 0.05, 1.5, 4);
+    const branch2 = new THREE.CylinderGeometry(0.03, 0.05, 1.5, 6);
     branch2.rotateZ(-Math.PI / 3);
     branch2.translate(-0.6, 4, 0.2);
 
-    return this._mergeGeometries([trunk, branch1, branch2]);
+    // 3rd branch + sub-fork
+    const branch3 = new THREE.CylinderGeometry(0.025, 0.05, 1.2, 6);
+    branch3.rotateZ(Math.PI / 5);
+    branch3.translate(0.4, 4.3, -0.3);
+
+    const subFork = new THREE.CylinderGeometry(0.02, 0.03, 0.8, 5);
+    subFork.rotateZ(Math.PI / 3);
+    subFork.translate(1.3, 4.0, 0.1);
+
+    return this._mergeGeometries([trunk, branch1, branch2, branch3, subFork]);
   }
 
-  _createGnarledGeometry() {
-    const trunk = new THREE.CylinderGeometry(0.15, 0.35, 4, 6);
+  _createGnarledTrunkGeometry() {
+    const trunk = new THREE.CylinderGeometry(0.15, 0.35, 4, 8, 3);
     trunk.translate(0, 2, 0);
+    displaceGeometryVertices(trunk, 0.04);
+    this._computeCylindricalUVs(trunk);
+    return trunk;
+  }
 
-    // Thick canopy blob
-    const canopy = new THREE.SphereGeometry(2, 6, 5);
+  _createGnarledCanopyGeometry() {
+    const canopy = new THREE.SphereGeometry(2.2, 8, 6);
     canopy.translate(0, 4.5, 0);
     canopy.scale(1, 0.7, 1);
+    displaceGeometryVertices(canopy, 0.25);
+    this._computeSphericalUVs(canopy);
+    return canopy;
+  }
 
-    return this._mergeGeometries([trunk, canopy]);
+  _createBirchGeometry() {
+    // Tall trunk with 2 diverging forks
+    const trunk = new THREE.CylinderGeometry(0.1, 0.2, 5.5, 8, 4);
+    trunk.translate(0, 2.75, 0);
+    displaceGeometryVertices(trunk, 0.02);
+
+    const fork1 = new THREE.CylinderGeometry(0.05, 0.1, 3, 6, 2);
+    fork1.rotateZ(Math.PI / 7);
+    fork1.translate(0.5, 6, 0);
+    displaceGeometryVertices(fork1, 0.02);
+
+    const fork2 = new THREE.CylinderGeometry(0.05, 0.1, 2.8, 6, 2);
+    fork2.rotateZ(-Math.PI / 6);
+    fork2.translate(-0.4, 5.8, 0.2);
+    displaceGeometryVertices(fork2, 0.02);
+
+    return this._mergeGeometries([trunk, fork1, fork2]);
+  }
+
+  _computeCylindricalUVs(geometry) {
+    const pos = geometry.attributes.position;
+    const uvs = new Float32Array(pos.count * 2);
+
+    let minY = Infinity, maxY = -Infinity;
+    for (let i = 0; i < pos.count; i++) {
+      const y = pos.getY(i);
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+    }
+    const rangeY = maxY - minY || 1;
+
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i);
+      const z = pos.getZ(i);
+      const y = pos.getY(i);
+
+      uvs[i * 2] = (Math.atan2(z, x) / Math.PI + 1) * 0.5;
+      uvs[i * 2 + 1] = (y - minY) / rangeY;
+    }
+
+    geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+  }
+
+  _computeSphericalUVs(geometry) {
+    const pos = geometry.attributes.position;
+    const uvs = new Float32Array(pos.count * 2);
+
+    let cx = 0, cy = 0, cz = 0;
+    for (let i = 0; i < pos.count; i++) {
+      cx += pos.getX(i);
+      cy += pos.getY(i);
+      cz += pos.getZ(i);
+    }
+    cx /= pos.count;
+    cy /= pos.count;
+    cz /= pos.count;
+
+    for (let i = 0; i < pos.count; i++) {
+      const dx = pos.getX(i) - cx;
+      const dy = pos.getY(i) - cy;
+      const dz = pos.getZ(i) - cz;
+
+      const r = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1;
+      uvs[i * 2] = (Math.atan2(dz, dx) / Math.PI + 1) * 0.5;
+      uvs[i * 2 + 1] = Math.acos(Math.max(-1, Math.min(1, dy / r))) / Math.PI;
+    }
+
+    geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
   }
 
   _mergeGeometries(geometries) {
-    // Manual merge: combine all positions, normals, indices
     let totalVerts = 0;
     let totalIdx = 0;
     for (const g of geometries) {
@@ -159,7 +314,6 @@ export default class ForestGenerator {
     const indices = [];
 
     let vertOffset = 0;
-    let idxOffset = 0;
 
     for (const g of geometries) {
       const pos = g.attributes.position;
@@ -198,8 +352,6 @@ export default class ForestGenerator {
   }
 
   _createColliders(pathCurve) {
-    // Store tree positions as {x, z, radius} for fast distance-based collision
-    // Only trees within 10 units of the path
     const pathSamples = [];
     for (let t = 0; t <= 1; t += 0.02) {
       pathSamples.push(pathCurve.getPointAt(t));
@@ -237,6 +389,7 @@ export default class ForestGenerator {
   dispose() {
     for (const m of this.instancedMeshes) {
       m.geometry.dispose();
+      if (m.material.map) m.material.map.dispose();
       m.material.dispose();
       this.scene.remove(m);
     }

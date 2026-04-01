@@ -23,11 +23,11 @@ export default class SkyDome {
       const y = posAttr.getY(i);
       const t = Math.max(0, (y / radius + 1) / 2);
 
-      // Horizon: dark warm brown-grey matching fog 0x0e0c0a
-      // Zenith: muted dark blue
-      colors[i * 3] = (14 + t * 6) / 255;
-      colors[i * 3 + 1] = (12 + t * 10) / 255;
-      colors[i * 3 + 2] = (10 + t * 25) / 255;
+      // Horizon: cold blue-black matching fog
+      // Zenith: deeper cold blue
+      colors[i * 3] = (10 + t * 4) / 255;
+      colors[i * 3 + 1] = (12 + t * 8) / 255;
+      colors[i * 3 + 2] = (18 + t * 42) / 255;
     }
 
     geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
@@ -45,8 +45,9 @@ export default class SkyDome {
   }
 
   _buildStars() {
-    const count = 150;
+    const count = 350;
     const positions = new Float32Array(count * 3);
+    const colors = new Float32Array(count * 3);
 
     for (let i = 0; i < count; i++) {
       const theta = Math.random() * Math.PI * 2;
@@ -56,17 +57,38 @@ export default class SkyDome {
       positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
       positions[i * 3 + 1] = r * Math.cos(phi);
       positions[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta);
+
+      // Color variation: warm and cool stars
+      const warmth = Math.random();
+      if (warmth < 0.3) {
+        // Warm yellowish
+        colors[i * 3] = 0.75 + Math.random() * 0.15;
+        colors[i * 3 + 1] = 0.7 + Math.random() * 0.1;
+        colors[i * 3 + 2] = 0.5 + Math.random() * 0.1;
+      } else if (warmth < 0.5) {
+        // Cool blueish
+        colors[i * 3] = 0.6 + Math.random() * 0.1;
+        colors[i * 3 + 1] = 0.65 + Math.random() * 0.1;
+        colors[i * 3 + 2] = 0.8 + Math.random() * 0.15;
+      } else {
+        // Neutral white
+        const b = 0.65 + Math.random() * 0.2;
+        colors[i * 3] = b;
+        colors[i * 3 + 1] = b;
+        colors[i * 3 + 2] = b + 0.05;
+      }
     }
 
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
     const mat = new THREE.PointsMaterial({
-      color: 0xaaaacc,
-      size: 0.4,
+      size: 0.6,
+      vertexColors: true,
       sizeAttenuation: true,
       transparent: true,
-      opacity: 0.4,
+      opacity: 0.80,
       fog: false,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
@@ -79,20 +101,38 @@ export default class SkyDome {
 
   _buildMoon() {
     const moonDir = new THREE.Vector3(-30, 40, -20).normalize();
-    const geo = new THREE.CircleGeometry(4, 12);
-    const mat = new THREE.MeshBasicMaterial({
-      color: 0xccddee,
+
+    // Glow ring behind the moon — larger, brighter
+    const glowGeo = new THREE.CircleGeometry(12, 16);
+    const glowMat = new THREE.MeshBasicMaterial({
+      color: 0x99aabb,
       fog: false,
       depthWrite: false,
       transparent: true,
-      opacity: 0.6,
+      opacity: 0.30,
+      side: THREE.DoubleSide,
+    });
+    const glow = new THREE.Mesh(glowGeo, glowMat);
+    glow.position.copy(moonDir.clone().multiplyScalar(179));
+    glow.lookAt(0, 0, 0);
+    glow.renderOrder = -998;
+    this.group.add(glow);
+
+    // Moon disc — larger, brighter
+    const geo = new THREE.CircleGeometry(6, 12);
+    const mat = new THREE.MeshBasicMaterial({
+      color: 0xddeeff,
+      fog: false,
+      depthWrite: false,
+      transparent: true,
+      opacity: 0.90,
       side: THREE.DoubleSide,
     });
 
     const moon = new THREE.Mesh(geo, mat);
-    moon.position.copy(moonDir.multiplyScalar(180));
+    moon.position.copy(moonDir.clone().multiplyScalar(180));
     moon.lookAt(0, 0, 0);
-    moon.renderOrder = -998;
+    moon.renderOrder = -997;
     this.group.add(moon);
   }
 

@@ -23,7 +23,7 @@ export default class Engine {
     (container || document.body).appendChild(this.renderer.domElement);
 
     this.scene = new THREE.Scene();
-    this.scene.fog = new THREE.FogExp2(0x1a1510, PSX_FOG_DENSITY);
+    this.scene.fog = new THREE.FogExp2(0x141820, PSX_FOG_DENSITY);
 
     this.camera = new THREE.PerspectiveCamera(65, aspect, 0.1, PSX_CAMERA_FAR);
     this.camera.position.set(0, 1.6, 0);

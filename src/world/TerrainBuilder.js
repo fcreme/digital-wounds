@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { patchMaterial } from '../fx/PSXEffect.js';
+import { createDirtTexture } from '../utils/ProceduralTextures.js';
 
 export default class TerrainBuilder {
   constructor(scene) {
@@ -8,7 +9,7 @@ export default class TerrainBuilder {
   }
 
   build() {
-    const geometry = new THREE.PlaneGeometry(200, 200, 64, 64);
+    const geometry = new THREE.PlaneGeometry(200, 200, 80, 80);
     geometry.rotateX(-Math.PI / 2);
 
     // Add subtle height variation
@@ -16,33 +17,48 @@ export default class TerrainBuilder {
     for (let i = 0; i < positions.count; i++) {
       const x = positions.getX(i);
       const z = positions.getZ(i);
-      const y = Math.sin(x * 0.05) * Math.cos(z * 0.05) * 0.4
-              + Math.sin(x * 0.15 + z * 0.1) * 0.15
-              + Math.sin(x * 0.4 + z * 0.3) * 0.05;
+      const y = Math.sin(x * 0.05) * Math.cos(z * 0.05) * 0.7
+              + Math.sin(x * 0.15 + z * 0.1) * 0.3
+              + Math.sin(x * 0.8 + z * 0.6) * 0.03;
       positions.setY(i, y);
     }
     geometry.computeVertexNormals();
 
-    // Vertex color variation — breaks up the flat single-color look
+    // Vertex color variation — cold grey-brown gothic palette
     const colors = new Float32Array(positions.count * 3);
-    const baseColor = new THREE.Color(0x5a4a30);
+    const baseColor = new THREE.Color(0x3a3830);
     for (let i = 0; i < positions.count; i++) {
       const x = positions.getX(i);
       const z = positions.getZ(i);
-      // Perlin-like variation using layered sin
-      const noise = Math.sin(x * 0.3 + z * 0.2) * 0.1
-                  + Math.sin(x * 0.7 - z * 0.5) * 0.06
-                  + Math.sin(x * 1.5 + z * 1.2) * 0.04;
-      const r = Math.max(0, Math.min(1, baseColor.r + noise));
-      const g = Math.max(0, Math.min(1, baseColor.g + noise * 0.8));
-      const b = Math.max(0, Math.min(1, baseColor.b + noise * 0.5));
+      const noise = Math.sin(x * 0.3 + z * 0.2) * 0.15
+                  + Math.sin(x * 0.7 - z * 0.5) * 0.08
+                  + Math.sin(x * 1.5 + z * 1.2) * 0.05;
+      // Green bias patches — less lively
+      const greenBias = Math.max(0, Math.sin(x * 0.12 + z * 0.08) * 0.03);
+      // Cold blue bias patches
+      const coldBias = Math.max(0, Math.sin(x * 0.09 - z * 0.11) * 0.02);
+      const r = Math.max(0, Math.min(1, baseColor.r + noise * 0.8));
+      const g = Math.max(0, Math.min(1, baseColor.g + noise * 0.7 + greenBias));
+      const b = Math.max(0, Math.min(1, baseColor.b + noise * 0.6 + coldBias));
       colors[i * 3] = r;
       colors[i * 3 + 1] = g;
       colors[i * 3 + 2] = b;
     }
     geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
-    const material = new THREE.MeshLambertMaterial({ color: 0xffffff, vertexColors: true });
+    // Tile UVs 40x40 across 200x200 terrain
+    const uvs = geometry.attributes.uv;
+    for (let i = 0; i < uvs.count; i++) {
+      uvs.setXY(i, uvs.getX(i) * 40, uvs.getY(i) * 40);
+    }
+
+    const dirtTex = createDirtTexture(256);
+    const material = new THREE.MeshStandardMaterial({
+      map: dirtTex,
+      vertexColors: true,
+      roughness: 0.95,
+      metalness: 0,
+    });
     patchMaterial(material);
 
     this.mesh = new THREE.Mesh(geometry, material);
@@ -56,6 +72,7 @@ export default class TerrainBuilder {
   dispose() {
     if (this.mesh) {
       this.mesh.geometry.dispose();
+      if (this.mesh.material.map) this.mesh.material.map.dispose();
       this.mesh.material.dispose();
       this.scene.remove(this.mesh);
     }

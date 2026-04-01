@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { patchMaterial } from '../fx/PSXEffect.js';
+import { createPathTexture } from '../utils/ProceduralTextures.js';
 
 export default class PathBuilder {
   constructor(scene) {
@@ -26,14 +27,6 @@ export default class PathBuilder {
 
     // Create path mesh — extruded flat ribbon
     const pathPoints = this.curve.getPoints(200);
-    const shape = new THREE.Shape();
-    shape.moveTo(-1.5, 0);
-    shape.lineTo(1.5, 0);
-    shape.lineTo(1.5, 0.02);
-    shape.lineTo(-1.5, 0.02);
-    shape.lineTo(-1.5, 0);
-
-    // Build path as a series of planes along the curve
     const geometry = new THREE.BufferGeometry();
     const vertices = [];
     const uvs = [];
@@ -59,7 +52,6 @@ export default class PathBuilder {
       v2.y = 0.02;
       v3.y = 0.02;
 
-      const base = (i * 2);
       const t0 = i / (pathPoints.length - 1);
       const t1 = (i + 1) / (pathPoints.length - 1);
 
@@ -88,7 +80,12 @@ export default class PathBuilder {
     geometry.setIndex(indices);
     geometry.computeVertexNormals();
 
-    const material = new THREE.MeshLambertMaterial({ color: 0x7a6848 });
+    const pathTex = createPathTexture(256);
+    const material = new THREE.MeshStandardMaterial({
+      map: pathTex,
+      roughness: 0.9,
+      metalness: 0,
+    });
     patchMaterial(material);
 
     this.mesh = new THREE.Mesh(geometry, material);
@@ -111,6 +108,7 @@ export default class PathBuilder {
 
   dispose() {
     if (this.mesh) {
+      if (this.mesh.material.map) this.mesh.material.map.dispose();
       this.mesh.geometry.dispose();
       this.mesh.material.dispose();
       this.scene.remove(this.mesh);

@@ -11,12 +11,12 @@ export default class Fireflies {
 
   build(pathCurve) {
     this._pathCurve = pathCurve;
-    const count = 40;
+    const count = 60;
     const positions = new Float32Array(count * 3);
     const colors = new Float32Array(count * 3);
     this._data = [];
 
-    const baseColor = new THREE.Color(0xaaff44);
+    const baseColor = new THREE.Color(0xffcc44);
 
     for (let i = 0; i < count; i++) {
       const pathT = Math.random();
@@ -43,7 +43,7 @@ export default class Fireflies {
     geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
     const material = new THREE.PointsMaterial({
-      size: 0.15,
+      size: 0.18,
       vertexColors: true,
       transparent: true,
       opacity: 0.8,

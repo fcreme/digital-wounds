@@ -9,7 +9,8 @@
       "Bash(node -e:*)",
       "Bash(unzip:*)",
       "Bash(python3:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(ls:*)"
     ]
   }
 }
