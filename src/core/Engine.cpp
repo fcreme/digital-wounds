@@ -3,6 +3,7 @@
 #include "renderer/Renderer.h"
 #include "scene/Scene.h"
 #include "audio/AudioManager.h"
+#include "ui/UIOverlay.h"
 
 #include <glad/gl.h>
 #include <SDL.h>
@@ -88,6 +89,13 @@ bool Engine::init(const std::string& title, int width, int height) {
         return false;
     }
 
+    // UI Overlay
+    m_ui = std::make_unique<UIOverlay>();
+    if (!m_ui->init(m_windowWidth, m_windowHeight)) {
+        std::cerr << "Failed to init UI overlay\n";
+        return false;
+    }
+
     // Scene
     m_scene = std::make_unique<Scene>();
     if (!m_scene->init(*m_renderer)) {
@@ -150,6 +158,7 @@ void Engine::processEvents() {
                     m_windowWidth = event.window.data1;
                     m_windowHeight = event.window.data2;
                     m_renderer->onResize(m_windowWidth, m_windowHeight);
+                    if (m_ui) m_ui->onResize(m_windowWidth, m_windowHeight);
                 }
                 break;
         }
@@ -157,7 +166,7 @@ void Engine::processEvents() {
 }
 
 void Engine::update(float dt) {
-    m_scene->update(dt, *m_inputManager, *m_renderer, m_audio.get());
+    m_scene->update(dt, *m_inputManager, *m_renderer, m_audio.get(), m_ui.get());
 }
 
 void Engine::render() {
@@ -177,11 +186,18 @@ void Engine::render() {
 
     // 5. Overlays (room transition fade)
     m_scene->renderOverlays();
+
+    // 6. UI (prompts, book viewer)
+    if (m_ui) {
+        m_scene->renderUI(*m_ui, m_windowWidth, m_windowHeight);
+    }
 }
 
 void Engine::shutdown() {
     if (m_scene) m_scene->shutdown();
     m_scene.reset();
+    if (m_ui) m_ui->shutdown();
+    m_ui.reset();
     if (m_renderer) m_renderer->shutdown();
     m_renderer.reset();
     if (m_audio) m_audio->shutdown();

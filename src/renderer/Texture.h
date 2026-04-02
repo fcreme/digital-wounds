@@ -16,6 +16,7 @@ public:
     Texture& operator=(Texture&& other) noexcept;
 
     bool load(const std::string& path);
+    bool loadFromMemory(const unsigned char* data, int length);
     void bind(GLenum unit = GL_TEXTURE0) const;
     void destroy();
 

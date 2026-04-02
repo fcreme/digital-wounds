@@ -10,6 +10,7 @@ class Renderer;
 class InputManager;
 class Scene;
 class AudioManager;
+class UIOverlay;
 
 class Engine {
 public:
@@ -39,6 +40,7 @@ private:
     std::unique_ptr<InputManager> m_inputManager;
     std::unique_ptr<Scene> m_scene;
     std::unique_ptr<AudioManager> m_audio;
+    std::unique_ptr<UIOverlay> m_ui;
 
     int m_windowWidth = 1280;
     int m_windowHeight = 720;

@@ -3,6 +3,7 @@
 #include "renderer/BackgroundLayer.h"
 #include "core/InputManager.h"
 #include "audio/AudioManager.h"
+#include "ui/UIOverlay.h"
 
 #include <glad/gl.h>
 #include <glm/gtc/matrix_transform.hpp>
@@ -47,6 +48,9 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
     m_triggers.clear();
     m_pointLights.clear();
     m_particles.clear();
+    m_books.clear();
+    m_nearBookIndex = -1;
+    m_activeBook = nullptr;
 
     if (!loadRoomDef(roomDefPath, m_currentRoom)) {
         return false;
@@ -62,10 +66,24 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
         renderer.getBackgroundLayer().loadTexture(m_currentRoom.backgroundPath);
     }
 
-    // Load OBJ-based props
+    // Load props (OBJ or GLB)
     for (const auto& propDef : m_currentRoom.props) {
         auto prop = std::make_unique<PropInstance>();
-        if (!propDef.modelPath.empty()) prop->mesh.loadOBJ(propDef.modelPath);
+
+        if (!propDef.modelPath.empty()) {
+            // Check file extension to pick loader
+            std::string ext;
+            auto dot = propDef.modelPath.rfind('.');
+            if (dot != std::string::npos)
+                ext = propDef.modelPath.substr(dot);
+
+            if (ext == ".glb" || ext == ".gltf") {
+                prop->model = std::make_unique<Model>();
+                prop->model->loadGLB(propDef.modelPath);
+            } else {
+                prop->mesh.loadOBJ(propDef.modelPath);
+            }
+        }
         if (!propDef.texturePath.empty()) prop->texture.load(propDef.texturePath);
 
         glm::mat4 t(1.0f);
@@ -145,9 +163,32 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
         door.spawnPos = glm::vec3(0.0f, 0.0f, 3.0f);
         m_triggers.push_back(door);
 
+        // Interactive book at the floating book position
+        {
+            auto b = std::make_unique<Book>();
+            b->init(glm::vec3(0.0f, 1.2f, -2.0f), 2.5f);
+            b->addPage("assets/textures/book_page1.png");
+            b->addPage("assets/textures/book_page2.png");
+            b->addPage("assets/textures/book_page3.png");
+            m_books.push_back(std::move(b));
+        }
+
         m_player.setWorldBounds(-4.0f, 4.0f, -4.5f, 4.0f);
     }
     else if (m_currentRoom.name == "Dark Hallway") {
+        // Picture Gallery GLB model
+        {
+            auto prop = std::make_unique<PropInstance>();
+            prop->model = std::make_unique<Model>();
+            if (prop->model->loadGLB("props/the_picture_gallery_low_poly__vr.glb")) {
+                glm::mat4 t(1.0f);
+                t = glm::translate(t, glm::vec3(0.0f, 0.0f, -2.0f));
+                t = glm::scale(t, glm::vec3(1.0f));
+                prop->transform = t;
+                m_props.push_back(std::move(prop));
+            }
+        }
+
         // Lanterns on walls
         auto addLantern = [&](float x, float y, float z) {
             auto l = std::make_unique<PropInstance>();
@@ -198,6 +239,15 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
         back.spawnPos = glm::vec3(0.0f, 0.0f, -3.0f);
         m_triggers.push_back(back);
 
+        // Book on the table
+        {
+            auto b = std::make_unique<Book>();
+            b->init(glm::vec3(0.0f, 0.5f, -1.0f), 2.0f);
+            b->addPage("assets/textures/book_page1.png");
+            b->addPage("assets/textures/book_page2.png");
+            m_books.push_back(std::move(b));
+        }
+
         m_player.setWorldBounds(-1.8f, 1.8f, -3.0f, 4.5f);
     }
 
@@ -212,9 +262,18 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
     return true;
 }
 
-void Scene::update(float dt, const InputManager& input, Renderer& renderer, AudioManager* audio) {
+void Scene::update(float dt, const InputManager& input, Renderer& renderer, AudioManager* audio, UIOverlay* /*ui*/) {
     m_transition.update(dt);
     if (m_transition.isActive()) return;
+
+    // If a book is open, only update the book (block player movement)
+    if (m_activeBook) {
+        m_activeBook->update(dt, input);
+        if (!m_activeBook->isOpen()) {
+            m_activeBook = nullptr;
+        }
+        return;
+    }
 
     glm::vec3 prevPos = m_player.getPosition();
     m_player.update(dt, input, m_camera);
@@ -226,6 +285,21 @@ void Scene::update(float dt, const InputManager& input, Renderer& renderer, Audi
     // Footstep audio
     if (audio) {
         audio->updateFootsteps(dt, m_playerMoving);
+    }
+
+    // Check book proximity
+    m_nearBookIndex = -1;
+    for (int i = 0; i < static_cast<int>(m_books.size()); i++) {
+        if (m_books[i]->isPlayerNear(m_player.getPosition())) {
+            m_nearBookIndex = i;
+            break;
+        }
+    }
+
+    // E to interact with nearby book
+    if (m_nearBookIndex >= 0 && input.isKeyPressed(SDL_SCANCODE_E)) {
+        m_books[m_nearBookIndex]->open();
+        m_activeBook = m_books[m_nearBookIndex].get();
     }
 
     // Animate rotating props
@@ -297,16 +371,22 @@ void Scene::renderObjects() {
     // Render props
     for (const auto& prop : m_props) {
         m_meshShader.setMat4("uModel", glm::value_ptr(prop->transform));
-        m_meshShader.setVec3("uMaterialColor", prop->materialColor.x, prop->materialColor.y, prop->materialColor.z);
 
-        bool hasTex = prop->texture.getID() != 0;
-        m_meshShader.setInt("uHasTexture", hasTex ? 1 : 0);
-        if (hasTex) {
-            prop->texture.bind(GL_TEXTURE0);
-            m_meshShader.setInt("uDiffuse", 0);
+        if (prop->model) {
+            // GLB model handles its own materials/textures per submesh
+            prop->model->draw(m_meshShader);
+        } else {
+            m_meshShader.setVec3("uMaterialColor", prop->materialColor.x, prop->materialColor.y, prop->materialColor.z);
+
+            bool hasTex = prop->texture.getID() != 0;
+            m_meshShader.setInt("uHasTexture", hasTex ? 1 : 0);
+            if (hasTex) {
+                prop->texture.bind(GL_TEXTURE0);
+                m_meshShader.setInt("uDiffuse", 0);
+            }
+
+            prop->mesh.draw();
         }
-
-        prop->mesh.draw();
     }
 
     // Render player
@@ -321,6 +401,18 @@ void Scene::renderParticles() {
 
 void Scene::renderOverlays() {
     m_transition.render();
+}
+
+void Scene::renderUI(UIOverlay& ui, int screenWidth, int screenHeight) {
+    // Show interaction prompt when near a book
+    if (m_nearBookIndex >= 0 && !m_activeBook) {
+        ui.drawPrompt("Press E to read");
+    }
+
+    // Render active book viewer
+    if (m_activeBook) {
+        m_activeBook->renderUI(ui, screenWidth, screenHeight);
+    }
 }
 
 void Scene::shutdown() {

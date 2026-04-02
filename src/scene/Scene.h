@@ -6,8 +6,10 @@
 #include "renderer/Mesh.h"
 #include "renderer/Texture.h"
 #include "renderer/Shader.h"
+#include "renderer/Model.h"
 #include "fx/ParticleSystem.h"
 #include "world/Player.h"
+#include "world/Book.h"
 
 #include <string>
 #include <memory>
@@ -18,6 +20,7 @@ namespace dw {
 class Renderer;
 class InputManager;
 class AudioManager;
+class UIOverlay;
 
 struct TriggerZone {
     glm::vec3 position{0.0f};
@@ -33,10 +36,11 @@ public:
 
     bool init(Renderer& renderer);
     bool loadRoom(const std::string& roomDefPath, Renderer& renderer);
-    void update(float dt, const InputManager& input, Renderer& renderer, AudioManager* audio);
+    void update(float dt, const InputManager& input, Renderer& renderer, AudioManager* audio, UIOverlay* ui);
     void renderObjects();
     void renderParticles();
     void renderOverlays();
+    void renderUI(UIOverlay& ui, int screenWidth, int screenHeight);
     void shutdown();
 
     Camera& getCamera() { return m_camera; }
@@ -54,6 +58,7 @@ private:
     struct PropInstance {
         Mesh mesh;
         Texture texture;
+        std::unique_ptr<Model> model;  // GLB model (used instead of mesh+texture when set)
         glm::mat4 transform{1.0f};
         float rotationSpeed = 0.0f;
         glm::vec3 materialColor{0.5f, 0.5f, 0.5f};
@@ -61,6 +66,10 @@ private:
     std::vector<std::unique_ptr<PropInstance>> m_props;
     std::vector<TriggerZone> m_triggers;
     std::vector<PointLightDef> m_pointLights;
+
+    std::vector<std::unique_ptr<Book>> m_books;
+    int m_nearBookIndex = -1;  // index of book player is near, -1 if none
+    Book* m_activeBook = nullptr;  // currently open book
 
     float m_propTime = 0.0f;
     bool m_playerMoving = false;
