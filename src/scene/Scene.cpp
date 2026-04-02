@@ -66,23 +66,13 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
         renderer.getBackgroundLayer().loadTexture(m_currentRoom.backgroundPath);
     }
 
-    // Load props (OBJ or GLB)
+    // Load props (any format via Assimp)
     for (const auto& propDef : m_currentRoom.props) {
         auto prop = std::make_unique<PropInstance>();
 
         if (!propDef.modelPath.empty()) {
-            // Check file extension to pick loader
-            std::string ext;
-            auto dot = propDef.modelPath.rfind('.');
-            if (dot != std::string::npos)
-                ext = propDef.modelPath.substr(dot);
-
-            if (ext == ".glb" || ext == ".gltf") {
-                prop->model = std::make_unique<Model>();
-                prop->model->loadGLB(propDef.modelPath);
-            } else {
-                prop->mesh.loadOBJ(propDef.modelPath);
-            }
+            prop->model = std::make_unique<Model>();
+            prop->model->load(propDef.modelPath);
         }
         if (!propDef.texturePath.empty()) prop->texture.load(propDef.texturePath);
 
@@ -180,7 +170,7 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
         {
             auto prop = std::make_unique<PropInstance>();
             prop->model = std::make_unique<Model>();
-            if (prop->model->loadGLB("props/the_picture_gallery_low_poly__vr.glb")) {
+            if (prop->model->load("props/the_picture_gallery_low_poly__vr.glb")) {
                 glm::mat4 t(1.0f);
                 t = glm::translate(t, glm::vec3(0.0f, 0.0f, -2.0f));
                 t = glm::scale(t, glm::vec3(1.0f));
@@ -188,6 +178,27 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
                 m_props.push_back(std::move(prop));
             }
         }
+
+        // Hospital props (FBX) — abandoned hospital atmosphere
+        auto addModelProp = [&](const std::string& modelPath, glm::vec3 pos, glm::vec3 rot, glm::vec3 scale) {
+            auto prop = std::make_unique<PropInstance>();
+            prop->model = std::make_unique<Model>();
+            if (prop->model->load(modelPath)) {
+                glm::mat4 t(1.0f);
+                t = glm::translate(t, pos);
+                t = glm::rotate(t, glm::radians(rot.y), glm::vec3(0, 1, 0));
+                t = glm::rotate(t, glm::radians(rot.x), glm::vec3(1, 0, 0));
+                t = glm::rotate(t, glm::radians(rot.z), glm::vec3(0, 0, 1));
+                t = glm::scale(t, scale);
+                prop->transform = t;
+                m_props.push_back(std::move(prop));
+            }
+        };
+
+        addModelProp("props/hospital_desk.fbx",       glm::vec3(-1.2f, 0.0f, -3.0f), glm::vec3(0, 90, 0),  glm::vec3(0.01f));
+        addModelProp("props/hospital_cabinet.fbx",     glm::vec3(1.5f, 0.0f, -4.0f),  glm::vec3(0, 0, 0),   glm::vec3(0.01f));
+        addModelProp("props/hospital_wheelchair.fbx",  glm::vec3(0.5f, 0.0f, -1.5f),  glm::vec3(0, -30, 0), glm::vec3(0.01f));
+        addModelProp("props/church_pew.obj",           glm::vec3(-1.0f, 0.0f, -5.0f), glm::vec3(0, 0, 0),   glm::vec3(0.5f));
 
         // Lanterns on walls
         auto addLantern = [&](float x, float y, float z) {

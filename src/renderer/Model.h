@@ -21,7 +21,7 @@ public:
     Model(Model&&) = default;
     Model& operator=(Model&&) = default;
 
-    bool loadGLB(const std::string& path);
+    bool load(const std::string& path);
     void draw(Shader& shader) const;
 
 private:

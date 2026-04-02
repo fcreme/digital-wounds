@@ -1,122 +1,145 @@
 #include "renderer/Model.h"
-#include "cgltf.h"
+
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
 
 #include <iostream>
+#include <filesystem>
 
 namespace dw {
 
-bool Model::loadGLB(const std::string& path) {
-    cgltf_options options{};
-    cgltf_data* data = nullptr;
+static std::string resolveTexturePath(const std::string& modelDir, const aiString& aiPath) {
+    std::string texPath(aiPath.C_Str());
+    // If absolute or already exists, use as-is
+    if (std::filesystem::exists(texPath))
+        return texPath;
+    // Try relative to model directory
+    std::string resolved = modelDir + "/" + texPath;
+    if (std::filesystem::exists(resolved))
+        return resolved;
+    // Try just the filename (strip directory from texture path)
+    auto fname = std::filesystem::path(texPath).filename().string();
+    resolved = modelDir + "/" + fname;
+    if (std::filesystem::exists(resolved))
+        return resolved;
+    return texPath; // return original, let Texture::load() report the error
+}
 
-    cgltf_result result = cgltf_parse_file(&options, path.c_str(), &data);
-    if (result != cgltf_result_success) {
-        std::cerr << "Model: failed to parse GLB: " << path << "\n";
+bool Model::load(const std::string& path) {
+    Assimp::Importer importer;
+
+    unsigned int flags = aiProcess_Triangulate
+                       | aiProcess_GenSmoothNormals
+                       | aiProcess_FlipUVs
+                       | aiProcess_CalcTangentSpace
+                       | aiProcess_JoinIdenticalVertices;
+
+    const aiScene* scene = importer.ReadFile(path, flags);
+    if (!scene || (scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE) || !scene->mRootNode) {
+        std::cerr << "Model: Assimp error loading '" << path << "': " << importer.GetErrorString() << "\n";
         return false;
     }
 
-    result = cgltf_load_buffers(&options, data, path.c_str());
-    if (result != cgltf_result_success) {
-        std::cerr << "Model: failed to load GLB buffers: " << path << "\n";
-        cgltf_free(data);
-        return false;
-    }
+    std::string modelDir = std::filesystem::path(path).parent_path().string();
 
-    // Pre-load all images into textures
-    std::vector<Texture> textures(data->images_count);
-    for (cgltf_size i = 0; i < data->images_count; i++) {
-        const cgltf_image& img = data->images[i];
-        if (img.buffer_view && img.buffer_view->buffer->data) {
-            const auto* ptr = static_cast<const unsigned char*>(img.buffer_view->buffer->data) + img.buffer_view->offset;
-            int len = static_cast<int>(img.buffer_view->size);
-            if (!textures[i].loadFromMemory(ptr, len)) {
+    // Pre-load embedded textures (for GLB/FBX with packed textures)
+    std::vector<Texture> embeddedTextures(scene->mNumTextures);
+    for (unsigned int i = 0; i < scene->mNumTextures; i++) {
+        const aiTexture* aiTex = scene->mTextures[i];
+        if (aiTex->mHeight == 0) {
+            // Compressed (e.g. PNG/JPG embedded) — mWidth = size in bytes
+            if (!embeddedTextures[i].loadFromMemory(
+                    reinterpret_cast<const unsigned char*>(aiTex->pcData),
+                    static_cast<int>(aiTex->mWidth))) {
                 std::cerr << "Model: failed to load embedded texture " << i << "\n";
             }
         }
+        // Non-compressed embedded textures (raw ARGB) are rare; skip for now
     }
 
-    // Process each mesh
-    for (cgltf_size mi = 0; mi < data->meshes_count; mi++) {
-        const cgltf_mesh& mesh = data->meshes[mi];
+    // Process all meshes
+    for (unsigned int mi = 0; mi < scene->mNumMeshes; mi++) {
+        const aiMesh* aiM = scene->mMeshes[mi];
 
-        for (cgltf_size pi = 0; pi < mesh.primitives_count; pi++) {
-            const cgltf_primitive& prim = mesh.primitives[pi];
-            if (prim.type != cgltf_primitive_type_triangles) continue;
+        std::vector<Vertex> vertices(aiM->mNumVertices);
+        for (unsigned int v = 0; v < aiM->mNumVertices; v++) {
+            vertices[v].position = glm::vec3(aiM->mVertices[v].x, aiM->mVertices[v].y, aiM->mVertices[v].z);
 
-            std::vector<Vertex> vertices;
-            std::vector<uint32_t> indices;
+            if (aiM->mNormals)
+                vertices[v].normal = glm::vec3(aiM->mNormals[v].x, aiM->mNormals[v].y, aiM->mNormals[v].z);
+            else
+                vertices[v].normal = glm::vec3(0.0f, 1.0f, 0.0f);
 
-            // Find accessors
-            const cgltf_accessor* posAccessor = nullptr;
-            const cgltf_accessor* normAccessor = nullptr;
-            const cgltf_accessor* uvAccessor = nullptr;
-
-            for (cgltf_size ai = 0; ai < prim.attributes_count; ai++) {
-                if (prim.attributes[ai].type == cgltf_attribute_type_position)
-                    posAccessor = prim.attributes[ai].data;
-                else if (prim.attributes[ai].type == cgltf_attribute_type_normal)
-                    normAccessor = prim.attributes[ai].data;
-                else if (prim.attributes[ai].type == cgltf_attribute_type_texcoord)
-                    uvAccessor = prim.attributes[ai].data;
-            }
-
-            if (!posAccessor) continue;
-
-            // Read vertices
-            cgltf_size vertCount = posAccessor->count;
-            vertices.resize(vertCount);
-
-            for (cgltf_size v = 0; v < vertCount; v++) {
-                cgltf_accessor_read_float(posAccessor, v, &vertices[v].position.x, 3);
-                if (normAccessor)
-                    cgltf_accessor_read_float(normAccessor, v, &vertices[v].normal.x, 3);
-                else
-                    vertices[v].normal = glm::vec3(0.0f, 1.0f, 0.0f);
-                if (uvAccessor)
-                    cgltf_accessor_read_float(uvAccessor, v, &vertices[v].texcoord.x, 2);
-            }
-
-            // Read indices
-            if (prim.indices) {
-                indices.resize(prim.indices->count);
-                for (cgltf_size i = 0; i < prim.indices->count; i++) {
-                    indices[i] = static_cast<uint32_t>(cgltf_accessor_read_index(prim.indices, i));
-                }
-            } else {
-                // Non-indexed: generate sequential indices
-                indices.resize(vertCount);
-                for (cgltf_size i = 0; i < vertCount; i++)
-                    indices[i] = static_cast<uint32_t>(i);
-            }
-
-            auto submesh = std::make_unique<SubMesh>();
-            submesh->mesh.upload(vertices, indices);
-
-            // Extract material
-            if (prim.material) {
-                const cgltf_material& mat = *prim.material;
-                if (mat.has_pbr_metallic_roughness) {
-                    const auto& pbr = mat.pbr_metallic_roughness;
-                    submesh->baseColor = glm::vec3(pbr.base_color_factor[0],
-                                                    pbr.base_color_factor[1],
-                                                    pbr.base_color_factor[2]);
-
-                    // Bind diffuse texture if available
-                    if (pbr.base_color_texture.texture && pbr.base_color_texture.texture->image) {
-                        cgltf_size imgIdx = pbr.base_color_texture.texture->image - data->images;
-                        if (imgIdx < data->images_count && textures[imgIdx].getID() != 0) {
-                            submesh->texture = std::move(textures[imgIdx]);
-                        }
-                    }
-                }
-            }
-
-            m_submeshes.push_back(std::move(submesh));
+            if (aiM->mTextureCoords[0])
+                vertices[v].texcoord = glm::vec2(aiM->mTextureCoords[0][v].x, aiM->mTextureCoords[0][v].y);
         }
+
+        // Indices
+        std::vector<uint32_t> indices;
+        for (unsigned int f = 0; f < aiM->mNumFaces; f++) {
+            const aiFace& face = aiM->mFaces[f];
+            for (unsigned int j = 0; j < face.mNumIndices; j++)
+                indices.push_back(face.mIndices[j]);
+        }
+
+        auto submesh = std::make_unique<SubMesh>();
+        submesh->mesh.upload(vertices, indices);
+
+        // Extract material
+        if (aiM->mMaterialIndex < scene->mNumMaterials) {
+            const aiMaterial* mat = scene->mMaterials[aiM->mMaterialIndex];
+
+            // Base color
+            aiColor4D diffuse;
+            if (mat->Get(AI_MATKEY_COLOR_DIFFUSE, diffuse) == AI_SUCCESS) {
+                submesh->baseColor = glm::vec3(diffuse.r, diffuse.g, diffuse.b);
+            }
+            // PBR base color factor (glTF)
+            aiColor4D baseColor;
+            if (mat->Get(AI_MATKEY_BASE_COLOR, baseColor) == AI_SUCCESS) {
+                submesh->baseColor = glm::vec3(baseColor.r, baseColor.g, baseColor.b);
+            }
+
+            // Diffuse texture
+            if (mat->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
+                aiString texPath;
+                mat->GetTexture(aiTextureType_DIFFUSE, 0, &texPath);
+                std::string tp(texPath.C_Str());
+
+                // Check if it's an embedded texture reference (e.g. "*0", "*1")
+                if (!tp.empty() && tp[0] == '*') {
+                    unsigned int texIdx = std::stoi(tp.substr(1));
+                    if (texIdx < scene->mNumTextures && embeddedTextures[texIdx].getID() != 0) {
+                        submesh->texture = std::move(embeddedTextures[texIdx]);
+                    }
+                } else {
+                    std::string resolved = resolveTexturePath(modelDir, texPath);
+                    submesh->texture.load(resolved);
+                }
+            }
+            // Also try BASE_COLOR texture (glTF PBR)
+            else if (mat->GetTextureCount(aiTextureType_BASE_COLOR) > 0) {
+                aiString texPath;
+                mat->GetTexture(aiTextureType_BASE_COLOR, 0, &texPath);
+                std::string tp(texPath.C_Str());
+
+                if (!tp.empty() && tp[0] == '*') {
+                    unsigned int texIdx = std::stoi(tp.substr(1));
+                    if (texIdx < scene->mNumTextures && embeddedTextures[texIdx].getID() != 0) {
+                        submesh->texture = std::move(embeddedTextures[texIdx]);
+                    }
+                } else {
+                    std::string resolved = resolveTexturePath(modelDir, texPath);
+                    submesh->texture.load(resolved);
+                }
+            }
+        }
+
+        m_submeshes.push_back(std::move(submesh));
     }
 
-    cgltf_free(data);
-    std::cout << "Model: loaded " << path << " (" << m_submeshes.size() << " submeshes)\n";
+    std::cout << "Model: loaded '" << path << "' (" << m_submeshes.size() << " submeshes)\n";
     return true;
 }
 
