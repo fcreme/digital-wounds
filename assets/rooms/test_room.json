@@ -1,0 +1,12 @@
+{
+    "name": "Forest Clearing",
+    "background": "assets/backgrounds/forest_clearing.png",
+    "collision": "",
+    "camera_position": [0.0, 3.5, 8.0],
+    "camera_target": [0.0, 0.5, 0.0],
+    "camera_fov": 50.0,
+    "ambient": [0.08, 0.08, 0.1],
+    "light_direction": [-0.3, -0.8, -0.5],
+    "light_color": [0.6, 0.55, 0.5],
+    "props": []
+}

@@ -1,0 +1,12 @@
+{
+    "name": "Dark Hallway",
+    "background": "assets/backgrounds/dark_hallway.png",
+    "collision": "",
+    "camera_position": [0.0, 2.5, 6.0],
+    "camera_target": [0.0, 1.0, 0.0],
+    "camera_fov": 55.0,
+    "ambient": [0.05, 0.04, 0.06],
+    "light_direction": [0.0, -1.0, -0.2],
+    "light_color": [0.9, 0.7, 0.4],
+    "props": []
+}

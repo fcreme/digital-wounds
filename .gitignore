@@ -1,0 +1,26 @@
+# Build output
+build/
+cmake-build-*/
+
+# IDE
+.vs/
+.vscode/
+*.sln
+*.vcxproj*
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Dependencies (legacy JS)
+node_modules/
+
+# Compiled objects
+*.o
+*.obj
+*.exe
+*.out
+*.app

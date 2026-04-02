@@ -1,41 +1,58 @@
 # Digital Wounds
 
-> A PS1/Silent Hill-inspired 3D web experience showcasing tattoo artist portfolios through interactive books in a dark atmospheric forest.
+> A Resident Evil Remake-style native C++ experience showcasing tattoo artist portfolios through interactive books in a dark atmospheric environment.
 
 **Status: Work in Progress**
 
 ## About
 
-Digital Wounds is an immersive first-person 3D experience built with Three.js. Players explore a fog-drenched forest rendered with PlayStation 1-era visual effects — vertex jitter, affine texture warping, ordered dithering, and scanline overlays. Along the path, interactive books display tattoo artist portfolios with realistic page-curl animations.
+Digital Wounds is an immersive desktop application built with a custom C++ engine. It uses the **RE Remake hybrid rendering architecture**: pre-rendered backgrounds created in Blender, combined with real-time 3D objects (characters, interactive books, props), dynamic lighting/shadows projected onto the static backgrounds, and FMV overlay loops for atmospheric effects like fog and swaying trees.
+
+The visual style targets a dark, Silent Hill-inspired atmosphere with film grain, vignette, and subtle bloom post-processing.
 
 ## Tech Stack
 
-- **Three.js** r170 — 3D rendering
-- **Vite** 6 — build tool & dev server
-- **Vanilla JavaScript** — no frameworks
+- **C++17** — core language
+- **SDL2** — window management, input, audio
+- **OpenGL 3.3+** — real-time rendering (core profile)
+- **GLM** — math library (vectors, matrices, transforms)
+- **CMake** — build system
+- **stb_image / stb_vorbis** — image and audio loading
 
-## Getting Started
+## RE Remake Rendering Architecture
 
-### Prerequisites
+Each scene ("room") combines multiple rendering layers:
 
-- Node.js 18+
-
-### Installation
-
-```bash
-git clone <repo-url>
-cd digital-wounds
-npm install
-npm run dev
+```
+1. Pre-rendered background    ← static image (Blender render)
+2. Depth pre-pass             ← hidden geometry sets Z-buffer
+3. Real-time 3D objects       ← books, lanterns, player model
+4. Shadow projection          ← dynamic shadows onto BG
+5. Particle effects           ← fog, dust, fireflies
+6. FMV video overlays         ← animated BG elements (fog, water)
+7. Post-processing            ← vignette, grain, bloom, color grade
 ```
 
-The dev server will start at `http://localhost:5173`.
+This approach gives cinematic-quality backgrounds with minimal GPU cost, while interactive elements remain fully 3D.
 
-### Build
+## Prerequisites
+
+- **CMake** 3.20+
+- **SDL2** development libraries
+- **C++17 compiler** (MSVC via Visual Studio 2022, or MinGW-w64)
+- **OpenGL 3.3+** capable GPU
+
+## Build
 
 ```bash
-npm run build
-npm run preview
+cmake -B build
+cmake --build build
+```
+
+Run:
+```bash
+./build/digital_wounds          # Linux/macOS
+build\Debug\digital_wounds.exe  # Windows
 ```
 
 ## Controls
@@ -47,42 +64,41 @@ npm run preview
 | `E` | Interact with book |
 | `A / D` | Previous / Next page (while reading) |
 | `Q` | Close book |
+| `ESC` | Quit |
 
-## Architecture
+## Project Structure
 
 ```
 src/
-├── core/           # Engine, EventBus, InputManager, AssetPipeline
-├── player/         # PlayerController, InteractionRaycaster
-├── world/          # WorldManager, ForestGenerator, TerrainBuilder,
-│                   # PathBuilder, ArtistStation, SkyDome, GroundScatter
-├── book/           # Book, BookFactory, PageGeometryBuilder,
-│                   # PageCurlAnimator, PageMaterial, PageTextureCompositor
-├── fx/             # PSXEffect, PostProcessing, ParticleSystem,
-│                   # FlickerLight, Fireflies, AudioSystem
-├── ui/             # UIOverlay, LoadingScreen
-└── utils/          # Math helpers
+├── main.cpp              # Entry point, SDL2 init
+├── core/                 # Engine, InputManager, AssetManager
+├── renderer/             # OpenGL: Renderer, BackgroundLayer, Shader, Mesh, Camera
+├── scene/                # Room/scene management, transitions
+├── world/                # Player, props, books, collision
+├── fx/                   # Post-processing, particles, FMV overlays
+├── audio/                # Spatial audio, ambient, footsteps
+└── utils/                # Math helpers, logging
+
+assets/
+├── backgrounds/          # Pre-rendered room images (from Blender)
+├── models/               # Real-time 3D props (.obj)
+├── textures/             # PBR textures
+├── collision/            # Per-room collision maps
+├── shaders/              # GLSL 330 core shaders
+├── audio/                # Music, SFX, ambient loops
+├── video/                # FMV overlay loops
+└── rooms/                # Room definitions (JSON)
+
+legacy/                   # Original Three.js prototype (reference only)
 ```
 
-All systems communicate through a central **EventBus** (pub/sub pattern).
+## Asset Pipeline
 
-## PSX Visual Pipeline
-
-The retro aesthetic is achieved through multiple layers:
-
-1. **Low-res rendering** — 240p internal resolution upscaled with nearest-neighbor filtering
-2. **Vertex jitter** — positions snapped to a coarse grid via `onBeforeCompile` patching
-3. **Affine texture mapping** — UVs divided by perspective-corrected W for authentic PS1 warping
-4. **Post-processing chain** — posterization, Bayer dithering, bloom, scanlines, vignette, film grain
-5. **Dense fog** — exponential squared fog for ~20 unit visibility (Silent Hill style)
-
-## Adding an Artist
-
-No code changes required:
-
-1. Create a config at `public/data/artists/<slug>/config.json`
-2. Add the slug to `public/data/artists/manifest.json`
-3. Place portfolio images in the artist directory
+1. **Backgrounds** — Model environments in Blender, render from fixed camera angles, export as PNG
+2. **Collision maps** — Export simplified geometry from Blender for walkable areas
+3. **3D props** — Model interactive objects in Blender, export as OBJ
+4. **FMV overlays** — Render animation loops (fog, water, fire) as video files
+5. **Room definitions** — JSON files specifying camera, background, collision, and props per room
 
 ## License
 

@@ -10,7 +10,28 @@
       "Bash(unzip:*)",
       "Bash(python3:*)",
       "Bash(python:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(where:*)",
+      "Bash(cmake:*)",
+      "Bash(\"C:\\\\Program Files \\(x86\\)\\\\Microsoft Visual Studio\\\\Installer\\\\vswhere.exe\" -latest -property installationPath)",
+      "Bash(\"/c/Program Files \\(x86\\)/Microsoft Visual Studio/Installer/vswhere.exe\" -all -property installationPath)",
+      "Bash(\"/c/Program Files \\(x86\\)/Microsoft Visual Studio/Installer/vswhere.exe\" -all -property displayName)",
+      "Bash(find:*)",
+      "Bash(\"/c/Program Files \\(x86\\)/Microsoft Visual Studio/Installer/vswhere.exe\" -latest -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath)",
+      "Bash(\"/c/Program Files \\(x86\\)/Microsoft Visual Studio/Installer/vswhere.exe\" -latest -property displayName)",
+      "Bash(\"/c/Program Files \\(x86\\)/Microsoft Visual Studio/Installer/vswhere.exe\" -latest -requires Microsoft.VisualStudio.Workload.NativeDesktop -property installationPath)",
+      "Bash(\"/c/Users/Usuario/AppData/Local/Microsoft/WindowsApps/winget.exe\" install Kitware.CMake --source winget --accept-package-agreements --accept-source-agreements)",
+      "Bash(/c/msys64/usr/bin/pacman.exe:*)",
+      "Bash(/c/msys64/mingw64/bin/pip.exe install:*)",
+      "Bash(/c/msys64/mingw64/bin/python.exe:*)",
+      "Bash(/c/msys64/mingw64/bin/cmake.exe:*)",
+      "Bash(/c/msys64/mingw64/bin/gcc.exe:*)",
+      "Bash(/c/msys64/usr/bin/bash.exe -lc 'export PATH=/mingw64/bin:$PATH && echo \"\"int main\\(\\){return 0;}\"\" > /tmp/t.c && gcc /tmp/t.c -o /tmp/t.exe && echo SUCCESS')",
+      "Bash(/c/msys64/usr/bin/bash.exe -lc 'export PATH=/mingw64/bin:$PATH && cd /c/Users/Usuario/Documents/PROGRAMACION/proyect1 && rm -rf build && cmake -B build -G \"\"MinGW Makefiles\"\" 2>&1')",
+      "Bash(/c/msys64/usr/bin/bash.exe -lc 'export PATH=/mingw64/bin:$PATH && cd /c/Users/Usuario/Documents/PROGRAMACION/proyect1 && cmake --build build 2>&1')",
+      "Bash(/c/msys64/usr/bin/bash.exe -lc 'export PATH=/mingw64/bin:$PATH && cd /c/Users/Usuario/Documents/PROGRAMACION/proyect1/build && timeout 5 ./digital_wounds.exe 2>&1; echo \"\"Exit: $?\"\"')",
+      "Bash(/c/msys64/usr/bin/bash.exe -lc 'export PATH=/mingw64/bin:$PATH && python3 -c \"\"\nimport struct, zlib\n\nwidth, height = 1280, 720\n\n# Create a dark forest-like gradient image\npixels = bytearray\\(\\)\nfor y in range\\(height\\):\n    pixels.append\\(0\\)  # filter byte\n    for x in range\\(width\\):\n        # Dark gradient with some variation\n        fy = y / height\n        fx = x / width\n        r = int\\(10 + 15 * fy + 8 * abs\\(fx - 0.5\\)\\)\n        g = int\\(15 + 20 * fy + 5 * abs\\(fx - 0.5\\)\\)\n        b = int\\(12 + 10 * fy + 3 * abs\\(fx - 0.5\\)\\)\n        pixels.extend\\([r, g, b]\\)\n\ndef create_png\\(w, h, raw_data\\):\n    def chunk\\(chunk_type, data\\):\n        c = chunk_type + data\n        crc = struct.pack\\(\\\\\"\">I\\\\\"\", zlib.crc32\\(c\\) & 0xffffffff\\)\n        return struct.pack\\(\\\\\"\">I\\\\\"\", len\\(data\\)\\) + c + crc\n    \n    sig = b\\\\\"\"\\\\\\\\x89PNG\\\\\\\\r\\\\\\\\n\\\\\\\\x1a\\\\\\\\n\\\\\"\"\n    ihdr = struct.pack\\(\\\\\"\">IIBBBBB\\\\\"\", w, h, 8, 2, 0, 0, 0\\)\n    compressed = zlib.compress\\(bytes\\(raw_data\\), 9\\)\n    return sig + chunk\\(b\\\\\"\"IHDR\\\\\"\", ihdr\\) + chunk\\(b\\\\\"\"IDAT\\\\\"\", compressed\\) + chunk\\(b\\\\\"\"IEND\\\\\"\", b\\\\\"\"\\\\\"\"\\)\n\npng = create_png\\(width, height, pixels\\)\nwith open\\(\\\\\"\"/c/Users/Usuario/Documents/PROGRAMACION/proyect1/assets/backgrounds/test_room.png\\\\\"\", \\\\\"\"wb\\\\\"\"\\) as f:\n    f.write\\(png\\)\nprint\\(f\\\\\"\"Created test_room.png \\({len\\(png\\)} bytes\\)\\\\\"\"\\)\n\"\"')",
+      "Bash(/c/msys64/usr/bin/bash.exe:*)"
     ]
   }
 }
