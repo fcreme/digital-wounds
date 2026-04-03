@@ -4,16 +4,52 @@ in vec2 vTexCoord;
 out vec4 FragColor;
 
 uniform sampler2D uScreen;
+uniform sampler2D uBloomTex;
+uniform sampler2D uDepthTex;
+uniform sampler2D uSSAOTex;
 uniform float uTime;
+uniform float uBloomIntensity;
 uniform vec2 uResolution;
 
-// Film grain noise
+// SSAO
+uniform int uSSAOEnabled;
+
+// Distance fog
+uniform int uFogEnabled;
+uniform vec3 uFogColor;
+uniform float uFogStart;
+uniform float uFogEnd;
+uniform float uNearPlane;
+uniform float uFarPlane;
+
 float rand(vec2 co) {
     return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
 }
 
+float linearizeDepth(float d, float near, float far) {
+    return (2.0 * near * far) / (far + near - (d * 2.0 - 1.0) * (far - near));
+}
+
 void main() {
     vec3 color = texture(uScreen, vTexCoord).rgb;
+
+    // --- SSAO ---
+    if (uSSAOEnabled != 0) {
+        float ao = texture(uSSAOTex, vTexCoord).r;
+        color *= ao;
+    }
+
+    // --- Bloom ---
+    vec3 bloom = texture(uBloomTex, vTexCoord).rgb;
+    color += bloom * uBloomIntensity;
+
+    // --- Distance Fog ---
+    if (uFogEnabled != 0) {
+        float depth = texture(uDepthTex, vTexCoord).r;
+        float linDepth = linearizeDepth(depth, uNearPlane, uFarPlane);
+        float fogFactor = smoothstep(uFogStart, uFogEnd, linDepth);
+        color = mix(color, uFogColor, fogFactor);
+    }
 
     // --- Vignette ---
     vec2 uv = vTexCoord;

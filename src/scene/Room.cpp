@@ -83,6 +83,11 @@ bool loadRoomDef(const std::string& path, RoomDef& out) {
     out.name = getValue("name");
     out.backgroundPath = getValue("background");
     out.collisionPath = getValue("collision");
+    out.depthGeometryPath = getValue("depth_geometry");
+    out.ambientAudioPath = getValue("ambient_audio");
+
+    std::string fp = getValue("first_person");
+    out.firstPerson = (fp == "true");
 
     std::string camPos = getValue("camera_position");
     if (!camPos.empty()) out.cameraPos = parseVec3(camPos);

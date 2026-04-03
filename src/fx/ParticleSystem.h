@@ -10,7 +10,8 @@ namespace dw {
 enum class ParticleType {
     Dust,       // slow floating specks
     Fog,        // slow drifting wisps
-    Fireflies   // glowing dots with random movement
+    Fireflies,  // glowing dots with random movement
+    Fire        // upward flames at light sources
 };
 
 struct ParticleEmitter {

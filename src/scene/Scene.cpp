@@ -1,15 +1,20 @@
 #include "scene/Scene.h"
 #include "renderer/Renderer.h"
 #include "renderer/BackgroundLayer.h"
+#include "renderer/ShadowMap.h"
 #include "core/InputManager.h"
 #include "audio/AudioManager.h"
 #include "ui/UIOverlay.h"
 
+#include <SDL.h>
 #include <glad/gl.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
 #include <cmath>
+#include <random>
+#include <vector>
+#include <algorithm>
 
 namespace dw {
 
@@ -51,6 +56,7 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
     m_books.clear();
     m_nearBookIndex = -1;
     m_activeBook = nullptr;
+    m_depthGeometry.reset();
 
     if (!loadRoomDef(roomDefPath, m_currentRoom)) {
         return false;
@@ -164,102 +170,352 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
         }
 
         m_player.setWorldBounds(-4.0f, 4.0f, -4.5f, 4.0f);
+
+        // Fog params for outdoor forest (lighter, farther)
+        renderer.getPostProcess().setFogParams(
+            glm::vec3(0.03f, 0.04f, 0.05f), 20.0f, 50.0f, 0.1f, 100.0f);
     }
     else if (m_currentRoom.name == "Dark Hallway") {
-        // Picture Gallery GLB model
+        // Picture Gallery GLB model — scaled up so player is inside the room
         {
             auto prop = std::make_unique<PropInstance>();
             prop->model = std::make_unique<Model>();
             if (prop->model->load("props/the_picture_gallery_low_poly__vr.glb")) {
                 glm::mat4 t(1.0f);
-                t = glm::translate(t, glm::vec3(0.0f, 0.0f, -2.0f));
-                t = glm::scale(t, glm::vec3(1.0f));
+                t = glm::translate(t, glm::vec3(0.0f, 0.0f, 0.0f));
+                t = glm::scale(t, glm::vec3(10.0f));
                 prop->transform = t;
                 m_props.push_back(std::move(prop));
             }
         }
 
-        // Hospital props (FBX) — abandoned hospital atmosphere
-        auto addModelProp = [&](const std::string& modelPath, glm::vec3 pos, glm::vec3 rot, glm::vec3 scale) {
-            auto prop = std::make_unique<PropInstance>();
-            prop->model = std::make_unique<Model>();
-            if (prop->model->load(modelPath)) {
-                glm::mat4 t(1.0f);
-                t = glm::translate(t, pos);
-                t = glm::rotate(t, glm::radians(rot.y), glm::vec3(0, 1, 0));
-                t = glm::rotate(t, glm::radians(rot.x), glm::vec3(1, 0, 0));
-                t = glm::rotate(t, glm::radians(rot.z), glm::vec3(0, 0, 1));
-                t = glm::scale(t, scale);
-                prop->transform = t;
-                m_props.push_back(std::move(prop));
-            }
+        // Lantern positions (used for props, lights, and fire particles)
+        struct LanternPos { float x, y, z; };
+        LanternPos lanterns[] = {
+            {-8.0f, 5.0f, 4.0f}, {8.0f, 5.0f, 4.0f},
+            {-8.0f, 5.0f, -8.0f}, {8.0f, 5.0f, -8.0f},
+            {0.0f, 5.0f, -14.0f}, {0.0f, 5.0f, 10.0f}
         };
 
-        addModelProp("props/hospital_desk.fbx",       glm::vec3(-1.2f, 0.0f, -3.0f), glm::vec3(0, 90, 0),  glm::vec3(0.01f));
-        addModelProp("props/hospital_cabinet.fbx",     glm::vec3(1.5f, 0.0f, -4.0f),  glm::vec3(0, 0, 0),   glm::vec3(0.01f));
-        addModelProp("props/hospital_wheelchair.fbx",  glm::vec3(0.5f, 0.0f, -1.5f),  glm::vec3(0, -30, 0), glm::vec3(0.01f));
-        addModelProp("props/church_pew.obj",           glm::vec3(-1.0f, 0.0f, -5.0f), glm::vec3(0, 0, 0),   glm::vec3(0.5f));
-
-        // Lanterns on walls
-        auto addLantern = [&](float x, float y, float z) {
+        for (const auto& lp : lanterns) {
+            // Bronze lantern cube
             auto l = std::make_unique<PropInstance>();
             l->mesh = Mesh::createCube(1.0f);
-            l->transform = glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(x, y, z)), glm::vec3(0.15f, 0.25f, 0.15f));
-            l->materialColor = glm::vec3(0.6f, 0.4f, 0.1f); // bronze
+            l->transform = glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(lp.x, lp.y, lp.z)), glm::vec3(0.3f, 0.5f, 0.3f));
+            l->materialColor = glm::vec3(0.6f, 0.4f, 0.1f);
             m_props.push_back(std::move(l));
-        };
-        addLantern(-1.5f, 1.8f, 0.0f);
-        addLantern(1.5f, 1.8f, 0.0f);
-        addLantern(-1.5f, 1.8f, -2.0f);
-        addLantern(1.5f, 1.8f, -2.0f);
+
+            // Fire particle emitter at each lantern
+            ParticleEmitter fire;
+            fire.type = ParticleType::Fire;
+            fire.origin = glm::vec3(lp.x, lp.y + 0.3f, lp.z);
+            fire.area = glm::vec3(0.15f, 0.1f, 0.15f);
+            fire.count = 15;
+            fire.color = glm::vec4(1.0f, 0.7f, 0.2f, 0.8f);
+            m_particles.addEmitter(fire);
+        }
 
         // Table
         auto table = std::make_unique<PropInstance>();
         table->mesh = Mesh::createCube(1.0f);
-        table->transform = glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.4f, -1.0f)), glm::vec3(1.2f, 0.05f, 0.6f));
-        table->materialColor = glm::vec3(0.3f, 0.18f, 0.08f); // dark wood
+        table->transform = glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.5f, 0.0f)), glm::vec3(1.5f, 0.06f, 0.8f));
+        table->materialColor = glm::vec3(0.3f, 0.18f, 0.08f);
         m_props.push_back(std::move(table));
 
-        // Floor
-        auto floor = std::make_unique<PropInstance>();
-        floor->mesh = Mesh::createPlane(4.0f, 10.0f);
-        floor->transform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f));
-        floor->materialColor = glm::vec3(0.12f, 0.1f, 0.08f);
-        m_props.push_back(std::move(floor));
+        // Pedestals for books
+        auto addPedestal = [&](float x, float z) {
+            auto p = std::make_unique<PropInstance>();
+            p->mesh = Mesh::createCube(1.0f);
+            p->transform = glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(x, 0.4f, z)), glm::vec3(0.4f, 0.8f, 0.4f));
+            p->materialColor = glm::vec3(0.2f, 0.15f, 0.1f);
+            m_props.push_back(std::move(p));
+        };
+        addPedestal(-5.0f, -4.0f);
+        addPedestal(5.0f, -4.0f);
+        addPedestal(-5.0f, 8.0f);
+        addPedestal(5.0f, 8.0f);
+
+        // Picture frames with procedural art textures
+        int frameSeed = 100;
+        auto addFrame = [&](float x, float y, float z, float ry, float w, float h) {
+            auto f = std::make_unique<PropInstance>();
+            f->mesh = Mesh::createCube(1.0f);
+            glm::mat4 t(1.0f);
+            t = glm::translate(t, glm::vec3(x, y, z));
+            t = glm::rotate(t, glm::radians(ry), glm::vec3(0, 1, 0));
+            t = glm::scale(t, glm::vec3(w, h, 0.05f));
+            f->transform = t;
+            f->materialColor = glm::vec3(0.35f, 0.25f, 0.15f);
+            // Generate procedural artwork texture
+            GLuint artTex = generateProceduralArt(frameSeed++, 256, 256);
+            f->texture = Texture(); // default constructed
+            f->texture.setID(artTex); // inject generated texture
+            m_props.push_back(std::move(f));
+        };
+        // Left wall
+        addFrame(-9.5f, 3.5f, -2.0f, 90.0f, 2.0f, 1.5f);
+        addFrame(-9.5f, 3.5f, 6.0f, 90.0f, 1.8f, 2.0f);
+        // Right wall
+        addFrame(9.5f, 3.5f, -2.0f, -90.0f, 2.0f, 1.5f);
+        addFrame(9.5f, 3.5f, 6.0f, -90.0f, 1.8f, 2.0f);
+        // Back wall
+        addFrame(-3.0f, 4.0f, -15.5f, 0.0f, 2.5f, 1.8f);
+        addFrame(3.0f, 4.0f, -15.5f, 0.0f, 2.0f, 2.5f);
+
+        // Rope barriers
+        auto addRope = [&](float x1, float z1, float x2, float z2, float y) {
+            float cx = (x1 + x2) * 0.5f;
+            float cz = (z1 + z2) * 0.5f;
+            float dx = x2 - x1, dz = z2 - z1;
+            float len = std::sqrt(dx * dx + dz * dz);
+            float angle = std::atan2(dx, dz);
+            auto r = std::make_unique<PropInstance>();
+            r->mesh = Mesh::createCube(1.0f);
+            glm::mat4 t(1.0f);
+            t = glm::translate(t, glm::vec3(cx, y, cz));
+            t = glm::rotate(t, angle, glm::vec3(0, 1, 0));
+            t = glm::scale(t, glm::vec3(0.03f, 0.03f, len));
+            r->transform = t;
+            r->materialColor = glm::vec3(0.5f, 0.1f, 0.1f);
+            m_props.push_back(std::move(r));
+        };
+        addRope(-5.0f, -4.0f, 5.0f, -4.0f, 0.85f);
+        addRope(-5.0f, 8.0f, 5.0f, 8.0f, 0.85f);
 
         // Warm lantern lights
-        m_pointLights.push_back({{-1.5f, 2.0f, 0.0f}, {1.0f, 0.7f, 0.3f}, 5.0f, true});
-        m_pointLights.push_back({{1.5f, 2.0f, 0.0f}, {1.0f, 0.7f, 0.3f}, 5.0f, true});
-        m_pointLights.push_back({{-1.5f, 2.0f, -2.0f}, {0.8f, 0.5f, 0.2f}, 4.0f, true});
-        m_pointLights.push_back({{1.5f, 2.0f, -2.0f}, {0.8f, 0.5f, 0.2f}, 4.0f, true});
+        m_pointLights.push_back({{-8.0f, 6.0f, 4.0f}, {1.0f, 0.7f, 0.3f}, 25.0f, true});
+        m_pointLights.push_back({{8.0f, 6.0f, 4.0f}, {1.0f, 0.7f, 0.3f}, 25.0f, true});
+        m_pointLights.push_back({{-8.0f, 6.0f, -8.0f}, {0.8f, 0.5f, 0.2f}, 20.0f, true});
+        m_pointLights.push_back({{8.0f, 6.0f, -8.0f}, {0.8f, 0.5f, 0.2f}, 20.0f, true});
 
-        // Dust in the hallway
+        // Dust + fog particles
         ParticleEmitter dust;
         dust.type = ParticleType::Dust;
-        dust.origin = glm::vec3(0.0f, 1.0f, 0.0f);
-        dust.area = glm::vec3(2.0f, 2.0f, 4.0f);
-        dust.count = 60;
-        dust.color = glm::vec4(0.9f, 0.8f, 0.5f, 0.2f); // warm tint from lanterns
+        dust.origin = glm::vec3(0.0f, 3.0f, 0.0f);
+        dust.area = glm::vec3(18.0f, 7.0f, 18.0f);
+        dust.count = 200;
+        dust.color = glm::vec4(0.9f, 0.8f, 0.5f, 0.15f);
         m_particles.addEmitter(dust);
 
-        // Trigger back
+        ParticleEmitter fog;
+        fog.type = ParticleType::Fog;
+        fog.origin = glm::vec3(0.0f, 0.5f, 0.0f);
+        fog.area = glm::vec3(18.0f, 1.5f, 18.0f);
+        fog.count = 80;
+        fog.color = glm::vec4(0.5f, 0.5f, 0.55f, 0.04f);
+        m_particles.addEmitter(fog);
+
+        // Triggers
         TriggerZone back;
-        back.position = glm::vec3(0.0f, 0.0f, 4.0f);
-        back.radius = 1.5f;
+        back.position = glm::vec3(0.0f, 0.0f, 18.0f);
+        back.radius = 3.0f;
         back.targetRoom = "assets/rooms/test_room.json";
         back.spawnPos = glm::vec3(0.0f, 0.0f, -3.0f);
         m_triggers.push_back(back);
 
-        // Book on the table
+        // Trigger to studio at far end
+        TriggerZone toStudio;
+        toStudio.position = glm::vec3(0.0f, 0.0f, -16.0f);
+        toStudio.radius = 2.5f;
+        toStudio.targetRoom = "assets/rooms/studio.json";
+        toStudio.spawnPos = glm::vec3(0.0f, 0.0f, 3.0f);
+        m_triggers.push_back(toStudio);
+
+        // Books
         {
             auto b = std::make_unique<Book>();
-            b->init(glm::vec3(0.0f, 0.5f, -1.0f), 2.0f);
+            b->init(glm::vec3(0.0f, 0.6f, 0.0f), 3.0f);
             b->addPage("assets/textures/book_page1.png");
             b->addPage("assets/textures/book_page2.png");
             m_books.push_back(std::move(b));
         }
+        {
+            auto b = std::make_unique<Book>();
+            b->init(glm::vec3(-5.0f, 0.9f, -4.0f), 3.0f);
+            b->addPage("assets/textures/book_page1.png");
+            m_books.push_back(std::move(b));
+        }
+        {
+            auto b = std::make_unique<Book>();
+            b->init(glm::vec3(5.0f, 0.9f, -4.0f), 3.0f);
+            b->addPage("assets/textures/book_page2.png");
+            m_books.push_back(std::move(b));
+        }
+        {
+            auto b = std::make_unique<Book>();
+            b->init(glm::vec3(-5.0f, 0.9f, 8.0f), 3.0f);
+            b->addPage("assets/textures/book_page3.png");
+            m_books.push_back(std::move(b));
+        }
+        {
+            auto b = std::make_unique<Book>();
+            b->init(glm::vec3(5.0f, 0.9f, 8.0f), 3.0f);
+            b->addPage("assets/textures/book_page1.png");
+            b->addPage("assets/textures/book_page2.png");
+            b->addPage("assets/textures/book_page3.png");
+            m_books.push_back(std::move(b));
+        }
 
-        m_player.setWorldBounds(-1.8f, 1.8f, -3.0f, 4.5f);
+        m_player.setWorldBounds(-12.0f, 12.0f, -16.0f, 18.0f);
+
+        renderer.getPostProcess().setFogParams(
+            glm::vec3(0.02f, 0.02f, 0.04f), 15.0f, 40.0f, 0.1f, 100.0f);
+    }
+    else if (m_currentRoom.name == "Artist Studio") {
+        // === Third room: intimate artist workspace ===
+
+        // Floor
+        auto floor = std::make_unique<PropInstance>();
+        floor->mesh = Mesh::createPlane(8.0f, 8.0f);
+        floor->transform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f));
+        floor->materialColor = glm::vec3(0.12f, 0.08f, 0.06f); // dark wood floor
+        m_props.push_back(std::move(floor));
+
+        // Walls (4 sides)
+        auto addWall = [&](float x, float z, float ry, float w) {
+            auto wall = std::make_unique<PropInstance>();
+            wall->mesh = Mesh::createCube(1.0f);
+            glm::mat4 t(1.0f);
+            t = glm::translate(t, glm::vec3(x, 1.5f, z));
+            t = glm::rotate(t, glm::radians(ry), glm::vec3(0, 1, 0));
+            t = glm::scale(t, glm::vec3(w, 3.0f, 0.1f));
+            wall->transform = t;
+            wall->materialColor = glm::vec3(0.08f, 0.06f, 0.05f);
+            m_props.push_back(std::move(wall));
+        };
+        addWall(0.0f, -4.0f, 0.0f, 8.0f);   // back wall
+        addWall(0.0f, 4.0f, 0.0f, 8.0f);     // front wall
+        addWall(-4.0f, 0.0f, 90.0f, 8.0f);   // left wall
+        addWall(4.0f, 0.0f, 90.0f, 8.0f);    // right wall
+
+        // Desk
+        auto desk = std::make_unique<PropInstance>();
+        desk->mesh = Mesh::createCube(1.0f);
+        desk->transform = glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.4f, -2.0f)), glm::vec3(1.8f, 0.05f, 0.8f));
+        desk->materialColor = glm::vec3(0.25f, 0.15f, 0.08f);
+        m_props.push_back(std::move(desk));
+
+        // Desk legs
+        for (float dx : {-0.8f, 0.8f}) {
+            for (float dz : {-0.35f, 0.35f}) {
+                auto leg = std::make_unique<PropInstance>();
+                leg->mesh = Mesh::createCube(1.0f);
+                leg->transform = glm::scale(glm::translate(glm::mat4(1.0f),
+                    glm::vec3(dx, 0.2f, -2.0f + dz)), glm::vec3(0.05f, 0.4f, 0.05f));
+                leg->materialColor = glm::vec3(0.2f, 0.12f, 0.06f);
+                m_props.push_back(std::move(leg));
+            }
+        }
+
+        // Chair
+        auto chair = std::make_unique<PropInstance>();
+        chair->mesh = Mesh::createCube(1.0f);
+        chair->transform = glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.25f, -1.0f)), glm::vec3(0.4f, 0.05f, 0.4f));
+        chair->materialColor = glm::vec3(0.3f, 0.18f, 0.1f);
+        m_props.push_back(std::move(chair));
+
+        // Ink bottles on desk (small cubes)
+        for (float dx : {-0.5f, -0.2f, 0.3f}) {
+            auto ink = std::make_unique<PropInstance>();
+            ink->mesh = Mesh::createCube(1.0f);
+            ink->transform = glm::scale(glm::translate(glm::mat4(1.0f),
+                glm::vec3(dx, 0.47f, -2.2f)), glm::vec3(0.04f, 0.06f, 0.04f));
+            ink->materialColor = glm::vec3(0.05f, 0.05f, 0.1f); // dark ink
+            m_props.push_back(std::move(ink));
+        }
+
+        // Shelf on back wall
+        auto shelf = std::make_unique<PropInstance>();
+        shelf->mesh = Mesh::createCube(1.0f);
+        shelf->transform = glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(-2.0f, 1.5f, -3.9f)), glm::vec3(1.5f, 0.04f, 0.3f));
+        shelf->materialColor = glm::vec3(0.2f, 0.13f, 0.07f);
+        m_props.push_back(std::move(shelf));
+
+        // Small artwork on back wall
+        {
+            auto art = std::make_unique<PropInstance>();
+            art->mesh = Mesh::createCube(1.0f);
+            glm::mat4 t(1.0f);
+            t = glm::translate(t, glm::vec3(2.0f, 2.0f, -3.9f));
+            t = glm::scale(t, glm::vec3(1.2f, 1.0f, 0.03f));
+            art->transform = t;
+            GLuint artTex = generateProceduralArt(200, 256, 256);
+            art->texture.setID(artTex);
+            m_props.push_back(std::move(art));
+        }
+        {
+            auto art = std::make_unique<PropInstance>();
+            art->mesh = Mesh::createCube(1.0f);
+            glm::mat4 t(1.0f);
+            t = glm::translate(t, glm::vec3(-1.5f, 2.2f, -3.9f));
+            t = glm::scale(t, glm::vec3(0.8f, 0.6f, 0.03f));
+            art->transform = t;
+            GLuint artTex = generateProceduralArt(201, 256, 256);
+            art->texture.setID(artTex);
+            m_props.push_back(std::move(art));
+        }
+
+        // Candle on desk (tiny cube + fire + point light)
+        auto candle = std::make_unique<PropInstance>();
+        candle->mesh = Mesh::createCube(1.0f);
+        candle->transform = glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(0.6f, 0.48f, -2.0f)), glm::vec3(0.03f, 0.1f, 0.03f));
+        candle->materialColor = glm::vec3(0.9f, 0.85f, 0.7f); // white-ish wax
+        m_props.push_back(std::move(candle));
+
+        m_pointLights.push_back({{0.6f, 0.6f, -2.0f}, {1.0f, 0.8f, 0.4f}, 6.0f, true});
+
+        // Candle fire
+        ParticleEmitter candleFire;
+        candleFire.type = ParticleType::Fire;
+        candleFire.origin = glm::vec3(0.6f, 0.58f, -2.0f);
+        candleFire.area = glm::vec3(0.02f, 0.01f, 0.02f);
+        candleFire.count = 8;
+        candleFire.color = glm::vec4(1.0f, 0.8f, 0.3f, 0.9f);
+        m_particles.addEmitter(candleFire);
+
+        // Ceiling light (dim, overhead)
+        m_pointLights.push_back({{0.0f, 2.8f, 0.0f}, {0.4f, 0.35f, 0.3f}, 8.0f, false});
+
+        // Dust motes
+        ParticleEmitter dust;
+        dust.type = ParticleType::Dust;
+        dust.origin = glm::vec3(0.0f, 1.5f, 0.0f);
+        dust.area = glm::vec3(3.5f, 2.0f, 3.5f);
+        dust.count = 60;
+        dust.color = glm::vec4(0.8f, 0.7f, 0.5f, 0.12f);
+        m_particles.addEmitter(dust);
+
+        // Trigger back to gallery
+        TriggerZone back;
+        back.position = glm::vec3(0.0f, 0.0f, 3.8f);
+        back.radius = 1.5f;
+        back.targetRoom = "assets/rooms/hallway.json";
+        back.spawnPos = glm::vec3(0.0f, 0.0f, -14.0f);
+        m_triggers.push_back(back);
+
+        // Main portfolio book on desk
+        {
+            auto b = std::make_unique<Book>();
+            b->init(glm::vec3(0.0f, 0.5f, -2.0f), 2.0f);
+            b->addPage("assets/textures/book_page1.png");
+            b->addPage("assets/textures/book_page2.png");
+            b->addPage("assets/textures/book_page3.png");
+            m_books.push_back(std::move(b));
+        }
+
+        // Book on shelf
+        {
+            auto b = std::make_unique<Book>();
+            b->init(glm::vec3(-2.0f, 1.55f, -3.8f), 1.5f);
+            b->addPage("assets/textures/book_page1.png");
+            m_books.push_back(std::move(b));
+        }
+
+        m_player.setWorldBounds(-3.5f, 3.5f, -3.5f, 3.5f);
+
+        // Intimate fog — close, warm
+        renderer.getPostProcess().setFogParams(
+            glm::vec3(0.03f, 0.025f, 0.02f), 5.0f, 15.0f, 0.1f, 100.0f);
     }
 
     // Copy point lights from room def (if any were in JSON)
@@ -267,13 +523,35 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
         m_pointLights.push_back(pl);
     }
 
+    // Load depth pre-pass geometry (hidden geometry for occlusion)
+    if (!m_currentRoom.depthGeometryPath.empty()) {
+        m_depthGeometry = std::make_unique<Model>();
+        if (!m_depthGeometry->load(m_currentRoom.depthGeometryPath)) {
+            std::cerr << "Scene: failed to load depth geometry: " << m_currentRoom.depthGeometryPath << "\n";
+            m_depthGeometry.reset();
+        }
+    }
+
+    // Set mouse mode based on first-person flag
+    SDL_SetRelativeMouseMode(m_currentRoom.firstPerson ? SDL_TRUE : SDL_FALSE);
+
+    // Load room-specific ambient audio
+    if (m_audio && !m_currentRoom.ambientAudioPath.empty()) {
+        m_audio->stopAmbient();
+        m_audio->loadAmbient(m_currentRoom.ambientAudioPath);
+        m_audio->playAmbient();
+    }
+
     std::cout << "Scene: room '" << m_currentRoom.name << "' loaded — "
               << m_props.size() << " props, " << m_pointLights.size() << " lights, "
-              << m_triggers.size() << " triggers\n";
+              << m_triggers.size() << " triggers, " << m_books.size() << " books"
+              << (m_currentRoom.firstPerson ? " [FP]" : " [Fixed]") << "\n";
     return true;
 }
 
 void Scene::update(float dt, const InputManager& input, Renderer& renderer, AudioManager* audio, UIOverlay* /*ui*/) {
+    m_audio = audio;  // cache for use in loadRoom (called from transitions)
+
     m_transition.update(dt);
     if (m_transition.isActive()) return;
 
@@ -290,22 +568,55 @@ void Scene::update(float dt, const InputManager& input, Renderer& renderer, Audi
     m_player.update(dt, input, m_camera);
     m_playerMoving = glm::distance(prevPos, m_player.getPosition()) > 0.001f;
 
+    // Camera update: FP or fixed
+    if (m_currentRoom.firstPerson) {
+        float eyeHeight = 1.6f + m_player.getHeadBob();
+        m_camera.updateFromPlayer(m_player.getPosition(), eyeHeight,
+                                  m_player.getSmoothYaw(), m_player.getSmoothPitch());
+    }
+    // else: camera stays as set from room def (fixed)
+
     m_propTime += dt;
     m_particles.update(dt);
 
-    // Footstep audio
+    // Audio: footsteps, reverb, listener position
     if (audio) {
         audio->updateFootsteps(dt, m_playerMoving);
+        audio->setReverb(m_currentRoom.firstPerson, 0.3f, 500.0f);
+
+        // Update listener for spatial audio
+        glm::vec3 lookDir = m_player.getLookDirection();
+        glm::vec3 rightDir = glm::normalize(glm::cross(lookDir, glm::vec3(0, 1, 0)));
+        audio->setListenerPos(m_camera.getPosition(), lookDir, rightDir);
     }
 
-    // Check book proximity
+    // Check book proximity / look-at
     m_nearBookIndex = -1;
+    glm::vec3 camPos = m_camera.getPosition();
+    glm::vec3 lookDir = m_player.getLookDirection();
+
     for (int i = 0; i < static_cast<int>(m_books.size()); i++) {
-        if (m_books[i]->isPlayerNear(m_player.getPosition())) {
+        if (!m_books[i]->isPlayerNear(m_player.getPosition())) continue;
+
+        if (m_currentRoom.firstPerson) {
+            // FP mode: must also be looking at the book
+            glm::vec3 toBook = glm::normalize(m_books[i]->getPosition() - camPos);
+            float dotAngle = glm::dot(lookDir, toBook);
+            // cos(30 deg) ~= 0.866
+            if (dotAngle > 0.866f) {
+                m_nearBookIndex = i;
+                break;
+            }
+        } else {
+            // Fixed-cam: proximity only
             m_nearBookIndex = i;
             break;
         }
     }
+
+    // Smooth highlight animation
+    float targetHighlight = (m_nearBookIndex >= 0) ? 1.0f : 0.0f;
+    m_highlightAmount += (targetHighlight - m_highlightAmount) * std::min(dt * 8.0f, 1.0f);
 
     // E to interact with nearby book
     if (m_nearBookIndex >= 0 && input.isKeyPressed(SDL_SCANCODE_E)) {
@@ -341,6 +652,23 @@ void Scene::update(float dt, const InputManager& input, Renderer& renderer, Audi
         }
     }
 
+    // After a room load, wait until player leaves all trigger zones before re-arming
+    if (m_triggerCooldown > 0.0f) {
+        bool insideAny = false;
+        for (const auto& trigger : m_triggers) {
+            float dist = glm::distance(glm::vec2(m_player.getPosition().x, m_player.getPosition().z),
+                                        glm::vec2(trigger.position.x, trigger.position.z));
+            if (dist < trigger.radius) {
+                insideAny = true;
+                break;
+            }
+        }
+        if (!insideAny) {
+            m_triggerCooldown = 0.0f;
+        }
+        return;
+    }
+
     // Check trigger zones
     for (const auto& trigger : m_triggers) {
         float dist = glm::distance(glm::vec2(m_player.getPosition().x, m_player.getPosition().z),
@@ -351,6 +679,7 @@ void Scene::update(float dt, const InputManager& input, Renderer& renderer, Audi
             m_transition.startTransition(1.5f, [this, targetRoom, spawnPos, &renderer]() {
                 loadRoom(targetRoom, renderer);
                 m_player.setPosition(spawnPos);
+                m_triggerCooldown = 1.0f;
             });
             break;
         }
@@ -383,9 +712,14 @@ void Scene::renderObjects() {
     for (const auto& prop : m_props) {
         m_meshShader.setMat4("uModel", glm::value_ptr(prop->transform));
 
+        // Highlight for book-linked props
+        float highlight = (prop->bookIndex >= 0 && prop->bookIndex == m_nearBookIndex) ? m_highlightAmount : 0.0f;
+        m_meshShader.setFloat("uHighlight", highlight);
+
         if (prop->model) {
-            // GLB model handles its own materials/textures per submesh
+            glDisable(GL_CULL_FACE);
             prop->model->draw(m_meshShader);
+            glEnable(GL_CULL_FACE);
         } else {
             m_meshShader.setVec3("uMaterialColor", prop->materialColor.x, prop->materialColor.y, prop->materialColor.z);
 
@@ -400,10 +734,12 @@ void Scene::renderObjects() {
         }
     }
 
-    // Render player
-    m_meshShader.setVec3("uMaterialColor", 0.35f, 0.3f, 0.28f);
-    m_meshShader.setInt("uHasTexture", 0);
-    m_player.render(m_meshShader);
+    // Render player cube only in fixed-camera rooms
+    if (!m_currentRoom.firstPerson) {
+        m_meshShader.setVec3("uMaterialColor", 0.6f, 0.3f, 0.2f);
+        m_meshShader.setInt("uHasTexture", 0);
+        m_player.render(m_meshShader);
+    }
 }
 
 void Scene::renderParticles() {
@@ -415,7 +751,12 @@ void Scene::renderOverlays() {
 }
 
 void Scene::renderUI(UIOverlay& ui, int screenWidth, int screenHeight) {
-    // Show interaction prompt when near a book
+    // Crosshair in FP mode (only when no book open)
+    if (m_currentRoom.firstPerson && !m_activeBook) {
+        ui.drawCrosshair();
+    }
+
+    // Show interaction prompt when looking at a book
     if (m_nearBookIndex >= 0 && !m_activeBook) {
         ui.drawPrompt("Press E to read");
     }
@@ -424,6 +765,114 @@ void Scene::renderUI(UIOverlay& ui, int screenWidth, int screenHeight) {
     if (m_activeBook) {
         m_activeBook->renderUI(ui, screenWidth, screenHeight);
     }
+}
+
+void Scene::renderShadowCasters(Shader& shadowShader) {
+    // Render all props into shadow map
+    for (const auto& prop : m_props) {
+        shadowShader.setMat4("uModel", glm::value_ptr(prop->transform));
+        if (prop->model) {
+            prop->model->draw(shadowShader);
+        } else {
+            prop->mesh.draw();
+        }
+    }
+
+    // Render player shadow only in fixed-camera mode
+    if (!m_currentRoom.firstPerson) {
+        m_player.render(shadowShader);
+    }
+}
+
+void Scene::renderDepthGeometry(Shader& depthShader, Camera& camera) {
+    if (!m_depthGeometry) return;
+
+    depthShader.use();
+    depthShader.setMat4("uView", glm::value_ptr(camera.getView()));
+    depthShader.setMat4("uProjection", glm::value_ptr(camera.getProjection()));
+
+    // Write depth only, no color
+    glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+
+    glm::mat4 identity(1.0f);
+    depthShader.setMat4("uModel", glm::value_ptr(identity));
+    m_depthGeometry->draw(depthShader);
+
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+}
+
+void Scene::bindShadowUniforms(ShadowMap& shadowMap) {
+    m_meshShader.use();
+
+    // Bind shadow map to texture unit 1
+    shadowMap.bind(GL_TEXTURE1);
+    m_meshShader.setInt("uShadowMap", 1);
+    m_meshShader.setMat4("uLightSpaceMatrix",
+                         glm::value_ptr(shadowMap.getLightSpaceMatrix()));
+    m_meshShader.setInt("uUseShadows", 1);
+}
+
+GLuint Scene::generateProceduralArt(int seed, int width, int height) {
+    std::mt19937 gen(seed);
+    std::uniform_real_distribution<float> dist(0.0f, 1.0f);
+
+    std::vector<unsigned char> pixels(width * height * 3);
+
+    // Choose a color palette based on seed
+    float hue = dist(gen);
+    float baseR = 0.05f + hue * 0.15f;
+    float baseG = 0.03f + (1.0f - hue) * 0.1f;
+    float baseB = 0.08f + dist(gen) * 0.12f;
+
+    // Generate abstract pattern: layered circles and gradients
+    float cx1 = dist(gen), cy1 = dist(gen);
+    float cx2 = dist(gen), cy2 = dist(gen);
+    float cx3 = dist(gen), cy3 = dist(gen);
+
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            float u = static_cast<float>(x) / width;
+            float v = static_cast<float>(y) / height;
+
+            float d1 = std::sqrt((u - cx1) * (u - cx1) + (v - cy1) * (v - cy1));
+            float d2 = std::sqrt((u - cx2) * (u - cx2) + (v - cy2) * (v - cy2));
+            float d3 = std::sqrt((u - cx3) * (u - cx3) + (v - cy3) * (v - cy3));
+
+            float pattern = std::sin(d1 * 12.0f) * 0.3f
+                          + std::cos(d2 * 8.0f + d1 * 4.0f) * 0.25f
+                          + std::sin(d3 * 15.0f) * 0.2f;
+
+            // Add noise
+            pattern += (dist(gen) - 0.5f) * 0.1f;
+
+            float r = std::clamp(baseR + pattern * 0.4f + d1 * 0.3f, 0.0f, 1.0f);
+            float g = std::clamp(baseG + pattern * 0.3f + d2 * 0.2f, 0.0f, 1.0f);
+            float b = std::clamp(baseB + pattern * 0.35f + d3 * 0.25f, 0.0f, 1.0f);
+
+            // Dark border (frame edge)
+            float border = std::min(std::min(u, v), std::min(1.0f - u, 1.0f - v));
+            float borderFade = std::clamp(border * 15.0f, 0.0f, 1.0f);
+            r *= borderFade;
+            g *= borderFade;
+            b *= borderFade;
+
+            int idx = (y * width + x) * 3;
+            pixels[idx + 0] = static_cast<unsigned char>(r * 255);
+            pixels[idx + 1] = static_cast<unsigned char>(g * 255);
+            pixels[idx + 2] = static_cast<unsigned char>(b * 255);
+        }
+    }
+
+    GLuint tex;
+    glGenTextures(1, &tex);
+    glBindTexture(GL_TEXTURE_2D, tex);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    return tex;
 }
 
 void Scene::shutdown() {

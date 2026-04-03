@@ -24,6 +24,9 @@ public:
     // Show interaction prompt at bottom of screen
     void drawPrompt(const std::string& text);
 
+    // Draw a small crosshair dot at screen center
+    void drawCrosshair();
+
     // Draw a simple text label (bitmap font - characters as quads)
     void drawText(const std::string& text, float x, float y, float scale, const glm::vec4& color);
 

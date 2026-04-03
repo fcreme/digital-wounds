@@ -21,6 +21,7 @@ class Renderer;
 class InputManager;
 class AudioManager;
 class UIOverlay;
+class ShadowMap;
 
 struct TriggerZone {
     glm::vec3 position{0.0f};
@@ -43,9 +44,15 @@ public:
     void renderUI(UIOverlay& ui, int screenWidth, int screenHeight);
     void shutdown();
 
+    // Shadow/depth pass support
+    void renderShadowCasters(Shader& shadowShader);
+    void renderDepthGeometry(Shader& depthShader, Camera& camera);
+    void bindShadowUniforms(ShadowMap& shadowMap);
+
     Camera& getCamera() { return m_camera; }
     Player& getPlayer() { return m_player; }
     const RoomDef& getCurrentRoom() const { return m_currentRoom; }
+    void setAudioManager(AudioManager* audio) { m_audio = audio; }
 
 private:
     RoomDef m_currentRoom;
@@ -62,10 +69,14 @@ private:
         glm::mat4 transform{1.0f};
         float rotationSpeed = 0.0f;
         glm::vec3 materialColor{0.5f, 0.5f, 0.5f};
+        int bookIndex = -1;  // if this prop represents a book, link to m_books index
     };
     std::vector<std::unique_ptr<PropInstance>> m_props;
     std::vector<TriggerZone> m_triggers;
     std::vector<PointLightDef> m_pointLights;
+
+    // Depth pre-pass hidden geometry
+    std::unique_ptr<Model> m_depthGeometry;
 
     std::vector<std::unique_ptr<Book>> m_books;
     int m_nearBookIndex = -1;  // index of book player is near, -1 if none
@@ -73,6 +84,13 @@ private:
 
     float m_propTime = 0.0f;
     bool m_playerMoving = false;
+    float m_triggerCooldown = 0.0f;
+    float m_highlightAmount = 0.0f;  // 0..1 smooth highlight for looked-at book
+
+    AudioManager* m_audio = nullptr;  // non-owning, set during update
+
+    // Procedural texture generation
+    static GLuint generateProceduralArt(int seed, int width, int height);
 };
 
 } // namespace dw

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <SDL.h>
+#include <glm/glm.hpp>
 #include <string>
 #include <vector>
 #include <unordered_map>
@@ -18,8 +19,14 @@ public:
     // Load a WAV file and store it by name
     bool loadSound(const std::string& name, const std::string& path);
 
-    // Play a sound (one-shot)
+    // Play a sound (one-shot, full volume centered)
     void playSound(const std::string& name);
+
+    // Play a sound with spatial positioning (volume attenuated by distance, stereo panned)
+    void playSoundAt(const std::string& name, const glm::vec3& sourcePos);
+
+    // Set listener position/orientation for spatial audio
+    void setListenerPos(const glm::vec3& pos, const glm::vec3& forward, const glm::vec3& right);
 
     // Ambient loop (only one ambient at a time)
     bool loadAmbient(const std::string& path);
@@ -31,6 +38,9 @@ public:
     void playFootstep();
     void setFootstepInterval(float seconds) { m_footstepInterval = seconds; }
     void updateFootsteps(float dt, bool isMoving);
+
+    // Simple delay-line reverb
+    void setReverb(bool enabled, float feedback = 0.3f, float delayMs = 500.0f);
 
 private:
     static void audioCallback(void* userdata, Uint8* stream, int len);
@@ -56,12 +66,26 @@ private:
     struct PlayingSound {
         const std::vector<Uint8>* buffer;
         size_t pos;
+        float volumeL = 1.0f;  // left channel volume (for spatial)
+        float volumeR = 1.0f;  // right channel volume
     };
     std::vector<PlayingSound> m_playing;
+
+    // Listener state (for spatial audio)
+    glm::vec3 m_listenerPos{0.0f};
+    glm::vec3 m_listenerForward{0.0f, 0.0f, -1.0f};
+    glm::vec3 m_listenerRight{1.0f, 0.0f, 0.0f};
 
     // Footsteps
     float m_footstepTimer = 0.0f;
     float m_footstepInterval = 0.4f;
+
+    // Reverb delay line
+    bool m_reverbEnabled = false;
+    float m_reverbFeedback = 0.3f;
+    std::vector<float> m_reverbBuffer;
+    size_t m_reverbPos = 0;
+    size_t m_reverbDelaySamples = 22050; // 0.5s at 44.1kHz
 };
 
 } // namespace dw

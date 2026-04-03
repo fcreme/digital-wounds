@@ -52,6 +52,14 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMENT "Copying assets to build directory"
 )
 
+# --- Copy props (3D models) to build directory ---
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/props
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>/props
+    COMMENT "Copying props to build directory"
+)
+
 # --- Compiler warnings ---
 if(MSVC)
     target_compile_options(${PROJECT_NAME} PRIVATE /W4)

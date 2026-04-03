@@ -95,6 +95,11 @@ void ParticleSystem::respawn(Particle& p) {
             p.size = randRange(3.0f, 6.0f);
             p.alpha = 0.0f; // will pulse
             break;
+        case ParticleType::Fire:
+            p.velocity = glm::vec3(randRange(-0.3f, 0.3f), randRange(1.0f, 2.5f), randRange(-0.3f, 0.3f));
+            p.size = randRange(4.0f, 8.0f);
+            p.alpha = randRange(0.5f, 0.9f);
+            break;
     }
 }
 
@@ -134,6 +139,26 @@ void ParticleSystem::update(float dt) {
                 if (glm::distance(p.position, p.origin) > glm::length(p.area)) {
                     p.velocity = (p.origin - p.position) * 0.5f;
                 }
+                break;
+
+            case ParticleType::Fire:
+                // Fast lifecycle — short-lived flames
+                p.life += dt * 1.5f; // extra speed on top of base 0.15
+                // Flicker sideways
+                p.velocity.x += randRange(-2.0f, 2.0f) * dt;
+                p.velocity.z += randRange(-2.0f, 2.0f) * dt;
+                // Fade out as it rises, shrink
+                {
+                    float t = std::min(p.life * 6.6f, 1.0f); // normalize to ~1s lifespan
+                    p.alpha = (1.0f - t) * 0.8f;
+                    p.size = (1.0f - t * 0.7f) * 6.0f;
+                    // Color shift: yellow-orange at birth → red-dark at death
+                    float r = 1.0f;
+                    float g = std::max(0.0f, 0.7f - t * 0.6f);
+                    float b = std::max(0.0f, 0.2f - t * 0.3f);
+                    p.color = glm::vec4(r, g, b, 1.0f);
+                }
+                if (p.life > 0.15f) respawn(p); // very short life
                 break;
         }
     }

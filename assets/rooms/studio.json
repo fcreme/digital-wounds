@@ -1,0 +1,15 @@
+{
+    "name": "Artist Studio",
+    "background": "assets/backgrounds/dark_hallway.png",
+    "collision": "",
+    "depth_geometry": "",
+    "first_person": true,
+    "ambient_audio": "assets/audio/ambient_forest.wav",
+    "camera_position": [0.0, 1.6, 2.0],
+    "camera_target": [0.0, 1.5, 0.0],
+    "camera_fov": 65.0,
+    "ambient": [0.08, 0.06, 0.05],
+    "light_direction": [0.0, -1.0, -0.3],
+    "light_color": [0.6, 0.5, 0.3],
+    "props": []
+}

@@ -28,6 +28,9 @@ struct RoomDef {
     std::string backgroundPath;
     std::string collisionPath;
     std::string ambientAudioPath;
+    std::string depthGeometryPath;
+
+    bool firstPerson = false;
 
     // Camera
     glm::vec3 cameraPos{0.0f, 2.0f, 5.0f};

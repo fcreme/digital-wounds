@@ -61,7 +61,10 @@ bool Engine::init(const std::string& title, int width, int height) {
 
     SDL_GL_SetSwapInterval(1);
 
+    // Mouse capture is now set per-room (FP vs fixed-cam)
+
     glEnable(GL_DEPTH_TEST);
+    glEnable(GL_CULL_FACE);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glClearColor(0.02f, 0.02f, 0.03f, 1.0f);
@@ -76,10 +79,8 @@ bool Engine::init(const std::string& title, int width, int height) {
         std::cerr << "Audio init failed (continuing without audio)\n";
         m_audio.reset();
     } else {
-        // Try to load ambient and footstep sounds (graceful if missing)
-        m_audio->loadAmbient("assets/audio/ambient_forest.wav");
+        // Load footstep sound (ambient is loaded per-room)
         m_audio->loadSound("footstep", "assets/audio/footstep.wav");
-        m_audio->playAmbient();
     }
 
     // Renderer
@@ -103,7 +104,8 @@ bool Engine::init(const std::string& title, int width, int height) {
         return false;
     }
 
-    m_scene->loadRoom("assets/rooms/test_room.json", *m_renderer);
+    m_scene->setAudioManager(m_audio.get());
+    m_scene->loadRoom("assets/rooms/hallway.json", *m_renderer);
 
     m_running = true;
     return true;
@@ -170,24 +172,32 @@ void Engine::update(float dt) {
 }
 
 void Engine::render() {
+    // 1. Shadow map pass (render from light's perspective)
+    m_renderer->renderShadowPass(*m_scene, m_scene->getCurrentRoom().lightDir);
+
+    // 2. Main scene (to PostProcess FBO)
     m_renderer->beginFrame();
 
-    // 1. Pre-rendered background
+    // 3. Pre-rendered background (depth write off)
     m_renderer->renderBackground();
 
-    // 2. Real-time 3D objects (props, player)
+    // 4. Depth pre-pass (hidden geometry for occlusion)
+    m_renderer->renderDepthPrePass(*m_scene, m_scene->getCamera());
+
+    // 5. Bind shadow map + render 3D objects
+    m_scene->bindShadowUniforms(m_renderer->getShadowMap());
     m_scene->renderObjects();
 
-    // 3. Particles (fog, dust, fireflies)
+    // 6. Particles (fog, dust, fireflies)
     m_scene->renderParticles();
 
-    // 4. Post-processing → screen
-    m_renderer->endFrame(m_totalTime);
+    // 7. Post-processing (SSAO + bloom + fog) → screen
+    m_renderer->endFrame(m_totalTime, m_scene->getCamera().getProjection());
 
-    // 5. Overlays (room transition fade)
+    // 8. Overlays (room transition fade)
     m_scene->renderOverlays();
 
-    // 6. UI (prompts, book viewer)
+    // 9. UI (prompts, book viewer)
     if (m_ui) {
         m_scene->renderUI(*m_ui, m_windowWidth, m_windowHeight);
     }

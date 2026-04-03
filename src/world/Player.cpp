@@ -20,16 +20,21 @@ bool Player::init() {
 void Player::update(float dt, const InputManager& input, const Camera& camera) {
     (void)camera;
 
-    // Tank controls (RE style): left/right rotates, up/down moves forward/back
-    if (input.isKeyDown(SDL_SCANCODE_A)) {
-        m_rotation += m_rotSpeed * dt;
-    }
-    if (input.isKeyDown(SDL_SCANCODE_D)) {
-        m_rotation -= m_rotSpeed * dt;
-    }
+    // Mouse look (negate X so moving mouse right turns camera right)
+    m_rotation -= input.getMouseDeltaX() * MOUSE_SENSITIVITY;
+    m_pitch -= input.getMouseDeltaY() * MOUSE_SENSITIVITY;
+    m_pitch = std::clamp(m_pitch, -MAX_PITCH, MAX_PITCH);
 
-    float forwardX = -std::sin(m_rotation);
-    float forwardZ = -std::cos(m_rotation);
+    // Smooth mouse interpolation
+    float lerpFactor = 1.0f - std::pow(0.001f, dt * 10.0f); // ~0.3 per frame at 60fps
+    m_smoothYaw += (m_rotation - m_smoothYaw) * lerpFactor;
+    m_smoothPitch += (m_pitch - m_smoothPitch) * lerpFactor;
+
+    // FPS movement: forward/back and strafe relative to yaw direction
+    float forwardX = std::sin(m_rotation);
+    float forwardZ = std::cos(m_rotation);
+    float rightX = forwardZ;   // perpendicular to forward on XZ plane
+    float rightZ = -forwardX;
 
     glm::vec3 movement(0.0f);
     if (input.isKeyDown(SDL_SCANCODE_W)) {
@@ -37,8 +42,16 @@ void Player::update(float dt, const InputManager& input, const Camera& camera) {
         movement.z += forwardZ * m_moveSpeed * dt;
     }
     if (input.isKeyDown(SDL_SCANCODE_S)) {
-        movement.x -= forwardX * m_moveSpeed * dt * 0.6f; // slower backwards
-        movement.z -= forwardZ * m_moveSpeed * dt * 0.6f;
+        movement.x -= forwardX * m_moveSpeed * dt;
+        movement.z -= forwardZ * m_moveSpeed * dt;
+    }
+    if (input.isKeyDown(SDL_SCANCODE_A)) {
+        movement.x -= rightX * m_moveSpeed * dt;
+        movement.z -= rightZ * m_moveSpeed * dt;
+    }
+    if (input.isKeyDown(SDL_SCANCODE_D)) {
+        movement.x += rightX * m_moveSpeed * dt;
+        movement.z += rightZ * m_moveSpeed * dt;
     }
 
     m_position += movement;
@@ -46,6 +59,25 @@ void Player::update(float dt, const InputManager& input, const Camera& camera) {
     // Clamp to world bounds
     m_position.x = std::clamp(m_position.x, m_boundsMinX, m_boundsMaxX);
     m_position.z = std::clamp(m_position.z, m_boundsMinZ, m_boundsMaxZ);
+
+    // Head bob — only advance when moving
+    bool isMoving = glm::length(movement) > 0.001f;
+    if (isMoving) {
+        m_headBobTime += dt;
+        m_headBobOffset = std::sin(m_headBobTime * HEAD_BOB_FREQ) * HEAD_BOB_AMP;
+    } else {
+        // Smoothly return to zero
+        m_headBobOffset *= 0.9f;
+        if (std::abs(m_headBobOffset) < 0.001f) m_headBobOffset = 0.0f;
+    }
+}
+
+glm::vec3 Player::getLookDirection() const {
+    glm::vec3 front;
+    front.x = std::cos(m_smoothPitch) * std::sin(m_smoothYaw);
+    front.y = std::sin(m_smoothPitch);
+    front.z = std::cos(m_smoothPitch) * std::cos(m_smoothYaw);
+    return glm::normalize(front);
 }
 
 void Player::render(Shader& shader) {

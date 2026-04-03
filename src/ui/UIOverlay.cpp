@@ -302,6 +302,12 @@ void UIOverlay::drawPrompt(const std::string& text) {
     drawText(text, textX, textY, textScale, glm::vec4(0.9f, 0.85f, 0.7f, 1.0f));
 }
 
+void UIOverlay::drawCrosshair() {
+    float cx = m_screenWidth * 0.5f - 2.0f;
+    float cy = m_screenHeight * 0.5f - 2.0f;
+    drawRect(cx, cy, 4.0f, 4.0f, glm::vec4(1.0f, 1.0f, 1.0f, 0.5f));
+}
+
 void UIOverlay::shutdown() {
     if (m_fontTexture) { glDeleteTextures(1, &m_fontTexture); m_fontTexture = 0; }
     if (m_quadVbo) { glDeleteBuffers(1, &m_quadVbo); m_quadVbo = 0; }
