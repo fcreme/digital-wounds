@@ -80,6 +80,10 @@ void RoomTransition::render() {
     m_shader.use();
     m_shader.setFloat("uAlpha", m_alpha);
 
+    GLint viewport[4];
+    glGetIntegerv(GL_VIEWPORT, viewport);
+    m_shader.setVec2("uResolution", static_cast<float>(viewport[2]), static_cast<float>(viewport[3]));
+
     glBindVertexArray(m_vao);
     glDrawArrays(GL_TRIANGLES, 0, 6);
     glBindVertexArray(0);
