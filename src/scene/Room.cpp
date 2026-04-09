@@ -36,6 +36,51 @@ glm::vec3 parseVec3(const std::string& s) {
     return v;
 }
 
+glm::vec4 parseVec4(const std::string& s) {
+    glm::vec4 v(0.0f);
+    std::string inner = s;
+    size_t a = inner.find('[');
+    size_t b = inner.find(']');
+    if (a != std::string::npos && b != std::string::npos) {
+        inner = inner.substr(a + 1, b - a - 1);
+    }
+    std::istringstream iss(inner);
+    char comma;
+    iss >> v.x >> comma >> v.y >> comma >> v.z >> comma >> v.w;
+    return v;
+}
+
+int parseInt(const std::string& s) {
+    try { return std::stoi(trim(s)); }
+    catch (...) { return 0; }
+}
+
+// Extract a field value from a JSON-like object substring
+std::string getField(const std::string& obj, const std::string& key) {
+    std::string search = "\"" + key + "\"";
+    size_t pos = obj.find(search);
+    if (pos == std::string::npos) return "";
+    pos = obj.find(':', pos);
+    if (pos == std::string::npos) return "";
+    pos++;
+    while (pos < obj.size() && (obj[pos] == ' ' || obj[pos] == '\t' || obj[pos] == '\n' || obj[pos] == '\r')) pos++;
+    if (pos >= obj.size()) return "";
+
+    if (obj[pos] == '[') {
+        size_t end = obj.find(']', pos);
+        if (end == std::string::npos) return "";
+        return obj.substr(pos, end - pos + 1);
+    } else if (obj[pos] == '"') {
+        size_t end = obj.find('"', pos + 1);
+        if (end == std::string::npos) return "";
+        return obj.substr(pos + 1, end - pos - 1);
+    } else {
+        size_t end = obj.find_first_of(",}\n\r", pos);
+        if (end == std::string::npos) end = obj.size();
+        return trim(obj.substr(pos, end - pos));
+    }
+}
+
 } // anonymous namespace
 
 namespace dw {
@@ -107,7 +152,58 @@ bool loadRoomDef(const std::string& path, RoomDef& out) {
     std::string lcol = getValue("light_color");
     if (!lcol.empty()) out.lightColor = parseVec3(lcol);
 
-    std::cout << "Room: loaded '" << out.name << "' from " << path << "\n";
+    // Parse particles array
+    {
+        std::string pKey = "\"particles\"";
+        size_t pPos = content.find(pKey);
+        if (pPos != std::string::npos) {
+            // Find the opening '[' of the particles array
+            size_t arrStart = content.find('[', pPos + pKey.size());
+            if (arrStart != std::string::npos) {
+                // Find each {...} object inside the array
+                size_t searchPos = arrStart + 1;
+                while (true) {
+                    size_t objStart = content.find('{', searchPos);
+                    if (objStart == std::string::npos) break;
+                    // Check we haven't passed the array's closing ']'
+                    size_t arrEnd = content.find(']', searchPos);
+                    if (arrEnd != std::string::npos && objStart > arrEnd) break;
+
+                    size_t objEnd = content.find('}', objStart);
+                    if (objEnd == std::string::npos) break;
+
+                    std::string obj = content.substr(objStart, objEnd - objStart + 1);
+
+                    ParticleEmitterDef pdef;
+                    pdef.type = getField(obj, "type");
+
+                    std::string orig = getField(obj, "origin");
+                    if (!orig.empty()) pdef.origin = parseVec3(orig);
+
+                    std::string ar = getField(obj, "area");
+                    if (!ar.empty()) pdef.area = parseVec3(ar);
+
+                    std::string cnt = getField(obj, "count");
+                    if (!cnt.empty()) pdef.count = parseInt(cnt);
+
+                    std::string col = getField(obj, "color");
+                    if (!col.empty()) pdef.color = parseVec4(col);
+
+                    std::string spd = getField(obj, "speed");
+                    if (!spd.empty()) pdef.speed = parseFloat(spd);
+
+                    std::string bs = getField(obj, "base_size");
+                    if (!bs.empty()) pdef.baseSize = parseFloat(bs);
+
+                    out.particles.push_back(pdef);
+                    searchPos = objEnd + 1;
+                }
+            }
+        }
+    }
+
+    std::cout << "Room: loaded '" << out.name << "' from " << path
+              << " (" << out.particles.size() << " particle emitters)\n";
     return true;
 }
 

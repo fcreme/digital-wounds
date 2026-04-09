@@ -28,6 +28,11 @@ public:
     void setSSAODebugView(bool enabled) { m_ssaoDebugView = enabled; }
     bool getSSAODebugView() const { return m_ssaoDebugView; }
 
+    // Depth texture access (for soft particles)
+    GLuint getDepthTexture() const { return m_depthTex; }
+    float getNearPlane() const { return m_nearPlane; }
+    float getFarPlane() const { return m_farPlane; }
+
 private:
     void createFBO(int width, int height);
     void destroyFBO();

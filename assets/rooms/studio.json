@@ -11,5 +11,25 @@
     "ambient": [0.08, 0.06, 0.05],
     "light_direction": [0.0, -1.0, -0.3],
     "light_color": [0.6, 0.5, 0.3],
-    "props": []
+    "props": [],
+    "particles": [
+        {
+            "type": "fire",
+            "origin": [0.6, 0.58, -2.0],
+            "area": [0.02, 0.01, 0.02],
+            "count": 8,
+            "color": [1.0, 0.8, 0.3, 0.9],
+            "speed": 0.3,
+            "base_size": 5.0
+        },
+        {
+            "type": "dust",
+            "origin": [0.0, 1.5, 0.0],
+            "area": [3.5, 2.0, 3.5],
+            "count": 60,
+            "color": [0.8, 0.7, 0.5, 0.12],
+            "speed": 0.3,
+            "base_size": 3.0
+        }
+    ]
 }

@@ -51,6 +51,7 @@ public:
 
     Camera& getCamera() { return m_camera; }
     Player& getPlayer() { return m_player; }
+    ParticleSystem& getParticleSystem() { return m_particles; }
     const RoomDef& getCurrentRoom() const { return m_currentRoom; }
     void setAudioManager(AudioManager* audio) { m_audio = audio; }
 

@@ -23,6 +23,16 @@ struct PointLightDef {
     bool flicker = false;
 };
 
+struct ParticleEmitterDef {
+    std::string type;  // "dust", "fog", "fireflies", "fire"
+    glm::vec3 origin{0.0f};
+    glm::vec3 area{5.0f, 3.0f, 5.0f};
+    int count = 100;
+    glm::vec4 color{1.0f, 1.0f, 1.0f, 0.3f};
+    float speed = 0.3f;
+    float baseSize = 3.0f;
+};
+
 struct RoomDef {
     std::string name;
     std::string backgroundPath;
@@ -45,6 +55,9 @@ struct RoomDef {
     glm::vec3 lightDir{-0.5f, -1.0f, -0.3f};
     glm::vec3 lightColor{0.8f, 0.75f, 0.7f};
     std::vector<PointLightDef> pointLights;
+
+    // Particles
+    std::vector<ParticleEmitterDef> particles;
 };
 
 bool loadRoomDef(const std::string& path, RoomDef& out);

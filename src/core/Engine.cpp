@@ -193,7 +193,13 @@ void Engine::render() {
     m_scene->bindShadowUniforms(m_renderer->getShadowMap());
     m_scene->renderObjects();
 
-    // 6. Particles (fog, dust, fireflies)
+    // 6. Particles (fog, dust, fireflies) — pass depth texture for soft particles
+    {
+        auto& pp = m_renderer->getPostProcess();
+        m_scene->getParticleSystem().setDepthTexture(
+            pp.getDepthTexture(), pp.getNearPlane(), pp.getFarPlane(),
+            m_windowWidth, m_windowHeight);
+    }
     m_scene->renderParticles();
 
     // 7. Post-processing (SSAO + bloom + fog) → screen

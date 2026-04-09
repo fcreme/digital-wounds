@@ -18,6 +18,15 @@
 
 namespace dw {
 
+namespace {
+ParticleType parseParticleType(const std::string& s) {
+    if (s == "fog") return ParticleType::Fog;
+    if (s == "fireflies") return ParticleType::Fireflies;
+    if (s == "fire") return ParticleType::Fire;
+    return ParticleType::Dust;
+}
+} // anonymous namespace
+
 Scene::Scene() = default;
 Scene::~Scene() = default;
 
@@ -124,33 +133,6 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
         m_pointLights.push_back({{-2.0f, 2.0f, -1.0f}, {0.9f, 0.6f, 0.2f}, 6.0f, true});
         m_pointLights.push_back({{2.0f, 2.0f, -1.0f}, {0.9f, 0.6f, 0.2f}, 6.0f, true});
 
-        // Particles: fireflies
-        ParticleEmitter fireflies;
-        fireflies.type = ParticleType::Fireflies;
-        fireflies.origin = glm::vec3(0.0f, 1.5f, 0.0f);
-        fireflies.area = glm::vec3(5.0f, 2.0f, 5.0f);
-        fireflies.count = 30;
-        fireflies.color = glm::vec4(0.8f, 1.0f, 0.3f, 0.6f);
-        m_particles.addEmitter(fireflies);
-
-        // Particles: dust
-        ParticleEmitter dust;
-        dust.type = ParticleType::Dust;
-        dust.origin = glm::vec3(0.0f, 1.0f, 0.0f);
-        dust.area = glm::vec3(6.0f, 3.0f, 6.0f);
-        dust.count = 80;
-        dust.color = glm::vec4(0.7f, 0.7f, 0.6f, 0.15f);
-        m_particles.addEmitter(dust);
-
-        // Particles: fog wisps
-        ParticleEmitter fog;
-        fog.type = ParticleType::Fog;
-        fog.origin = glm::vec3(0.0f, 0.3f, 0.0f);
-        fog.area = glm::vec3(6.0f, 0.8f, 6.0f);
-        fog.count = 40;
-        fog.color = glm::vec4(0.6f, 0.65f, 0.7f, 0.06f);
-        m_particles.addEmitter(fog);
-
         // Trigger
         TriggerZone door;
         door.position = glm::vec3(0.0f, 0.0f, -4.0f);
@@ -204,15 +186,6 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
             l->transform = glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(lp.x, lp.y, lp.z)), glm::vec3(0.3f, 0.5f, 0.3f));
             l->materialColor = glm::vec3(0.6f, 0.4f, 0.1f);
             m_props.push_back(std::move(l));
-
-            // Fire particle emitter at each lantern
-            ParticleEmitter fire;
-            fire.type = ParticleType::Fire;
-            fire.origin = glm::vec3(lp.x, lp.y + 0.3f, lp.z);
-            fire.area = glm::vec3(0.15f, 0.1f, 0.15f);
-            fire.count = 15;
-            fire.color = glm::vec4(1.0f, 0.7f, 0.2f, 0.8f);
-            m_particles.addEmitter(fire);
         }
 
         // Table
@@ -287,23 +260,6 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
         m_pointLights.push_back({{8.0f, 6.0f, 4.0f}, {1.0f, 0.7f, 0.3f}, 25.0f, true});
         m_pointLights.push_back({{-8.0f, 6.0f, -8.0f}, {0.8f, 0.5f, 0.2f}, 20.0f, true});
         m_pointLights.push_back({{8.0f, 6.0f, -8.0f}, {0.8f, 0.5f, 0.2f}, 20.0f, true});
-
-        // Dust + fog particles
-        ParticleEmitter dust;
-        dust.type = ParticleType::Dust;
-        dust.origin = glm::vec3(0.0f, 3.0f, 0.0f);
-        dust.area = glm::vec3(18.0f, 7.0f, 18.0f);
-        dust.count = 200;
-        dust.color = glm::vec4(0.9f, 0.8f, 0.5f, 0.15f);
-        m_particles.addEmitter(dust);
-
-        ParticleEmitter fog;
-        fog.type = ParticleType::Fog;
-        fog.origin = glm::vec3(0.0f, 0.5f, 0.0f);
-        fog.area = glm::vec3(18.0f, 1.5f, 18.0f);
-        fog.count = 80;
-        fog.color = glm::vec4(0.5f, 0.5f, 0.55f, 0.04f);
-        m_particles.addEmitter(fog);
 
         // Triggers
         TriggerZone back;
@@ -464,26 +420,8 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
 
         m_pointLights.push_back({{0.6f, 0.6f, -2.0f}, {1.0f, 0.8f, 0.4f}, 6.0f, true});
 
-        // Candle fire
-        ParticleEmitter candleFire;
-        candleFire.type = ParticleType::Fire;
-        candleFire.origin = glm::vec3(0.6f, 0.58f, -2.0f);
-        candleFire.area = glm::vec3(0.02f, 0.01f, 0.02f);
-        candleFire.count = 8;
-        candleFire.color = glm::vec4(1.0f, 0.8f, 0.3f, 0.9f);
-        m_particles.addEmitter(candleFire);
-
         // Ceiling light (dim, overhead)
         m_pointLights.push_back({{0.0f, 2.8f, 0.0f}, {0.4f, 0.35f, 0.3f}, 8.0f, false});
-
-        // Dust motes
-        ParticleEmitter dust;
-        dust.type = ParticleType::Dust;
-        dust.origin = glm::vec3(0.0f, 1.5f, 0.0f);
-        dust.area = glm::vec3(3.5f, 2.0f, 3.5f);
-        dust.count = 60;
-        dust.color = glm::vec4(0.8f, 0.7f, 0.5f, 0.12f);
-        m_particles.addEmitter(dust);
 
         // Trigger back to gallery
         TriggerZone back;
@@ -521,6 +459,19 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
     // Copy point lights from room def (if any were in JSON)
     for (const auto& pl : m_currentRoom.pointLights) {
         m_pointLights.push_back(pl);
+    }
+
+    // Spawn particle emitters from room JSON
+    for (const auto& pdef : m_currentRoom.particles) {
+        ParticleEmitter e;
+        e.type = parseParticleType(pdef.type);
+        e.origin = pdef.origin;
+        e.area = pdef.area;
+        e.count = pdef.count;
+        e.color = pdef.color;
+        e.speed = pdef.speed;
+        e.baseSize = pdef.baseSize;
+        m_particles.addEmitter(e);
     }
 
     // Load depth pre-pass geometry (hidden geometry for occlusion)

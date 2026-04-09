@@ -36,6 +36,8 @@ public:
     void render(const glm::mat4& view, const glm::mat4& projection);
     void shutdown();
 
+    void setDepthTexture(GLuint tex, float nearPlane, float farPlane, int screenW, int screenH);
+
 private:
     struct Particle {
         glm::vec3 position;
@@ -60,6 +62,12 @@ private:
     std::vector<Particle> m_particles;
     std::vector<ParticleEmitter> m_emitters;
     float m_time = 0.0f;
+
+    GLuint m_depthTex = 0;
+    float m_nearPlane = 0.1f;
+    float m_farPlane = 100.0f;
+    int m_screenW = 1280;
+    int m_screenH = 720;
 };
 
 } // namespace dw

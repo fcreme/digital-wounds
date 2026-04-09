@@ -29,14 +29,16 @@ bool ParticleSystem::init() {
     glBindVertexArray(m_vao);
     glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
 
-    // We'll upload per-particle data: vec3 position + float size + vec4 color
-    // Stride = 32 bytes (3+1+4 floats)
+    // Per-particle data: vec3 position + float size + vec4 color + float type
+    // Stride = 36 bytes (3+1+4+1 = 9 floats)
     glEnableVertexAttribArray(0); // position
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(1); // size
-    glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+    glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(2); // color
-    glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(4 * sizeof(float)));
+    glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (void*)(4 * sizeof(float)));
+    glEnableVertexAttribArray(3); // type
+    glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (void*)(8 * sizeof(float)));
 
     glBindVertexArray(0);
 
@@ -164,12 +166,20 @@ void ParticleSystem::update(float dt) {
     }
 }
 
+void ParticleSystem::setDepthTexture(GLuint tex, float nearPlane, float farPlane, int screenW, int screenH) {
+    m_depthTex = tex;
+    m_nearPlane = nearPlane;
+    m_farPlane = farPlane;
+    m_screenW = screenW;
+    m_screenH = screenH;
+}
+
 void ParticleSystem::render(const glm::mat4& view, const glm::mat4& projection) {
     if (m_particles.empty()) return;
 
-    // Build vertex data: position(3) + size(1) + color(4) per particle
+    // Build vertex data: position(3) + size(1) + color(4) + type(1) per particle
     std::vector<float> data;
-    data.reserve(m_particles.size() * 8);
+    data.reserve(m_particles.size() * 9);
 
     for (const auto& p : m_particles) {
         if (p.alpha <= 0.001f) continue;
@@ -181,9 +191,10 @@ void ParticleSystem::render(const glm::mat4& view, const glm::mat4& projection) 
         data.push_back(p.color.g);
         data.push_back(p.color.b);
         data.push_back(p.alpha);
+        data.push_back(static_cast<float>(static_cast<int>(p.type)));
     }
 
-    int vertexCount = static_cast<int>(data.size()) / 8;
+    int vertexCount = static_cast<int>(data.size()) / 9;
     if (vertexCount == 0) return;
 
     glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
@@ -197,6 +208,19 @@ void ParticleSystem::render(const glm::mat4& view, const glm::mat4& projection) 
     m_shader.use();
     m_shader.setMat4("uView", glm::value_ptr(view));
     m_shader.setMat4("uProjection", glm::value_ptr(projection));
+
+    // Bind depth texture for soft particles
+    if (m_depthTex != 0) {
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, m_depthTex);
+        m_shader.setInt("uDepthTex", 0);
+        m_shader.setFloat("uNearPlane", m_nearPlane);
+        m_shader.setFloat("uFarPlane", m_farPlane);
+        m_shader.setVec2("uResolution", static_cast<float>(m_screenW), static_cast<float>(m_screenH));
+        m_shader.setInt("uHasDepth", 1);
+    } else {
+        m_shader.setInt("uHasDepth", 0);
+    }
 
     glBindVertexArray(m_vao);
     glDrawArrays(GL_POINTS, 0, vertexCount);

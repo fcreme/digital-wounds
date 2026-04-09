@@ -11,5 +11,79 @@
     "ambient": [0.12, 0.10, 0.14],
     "light_direction": [0.0, -0.95, -0.1],
     "light_color": [1.0, 0.8, 0.5],
-    "props": []
+    "props": [],
+    "particles": [
+        {
+            "type": "fire",
+            "origin": [-8.0, 5.3, 4.0],
+            "area": [0.15, 0.1, 0.15],
+            "count": 15,
+            "color": [1.0, 0.7, 0.2, 0.8],
+            "speed": 0.3,
+            "base_size": 6.0
+        },
+        {
+            "type": "fire",
+            "origin": [8.0, 5.3, 4.0],
+            "area": [0.15, 0.1, 0.15],
+            "count": 15,
+            "color": [1.0, 0.7, 0.2, 0.8],
+            "speed": 0.3,
+            "base_size": 6.0
+        },
+        {
+            "type": "fire",
+            "origin": [-8.0, 5.3, -8.0],
+            "area": [0.15, 0.1, 0.15],
+            "count": 15,
+            "color": [1.0, 0.7, 0.2, 0.8],
+            "speed": 0.3,
+            "base_size": 6.0
+        },
+        {
+            "type": "fire",
+            "origin": [8.0, 5.3, -8.0],
+            "area": [0.15, 0.1, 0.15],
+            "count": 15,
+            "color": [1.0, 0.7, 0.2, 0.8],
+            "speed": 0.3,
+            "base_size": 6.0
+        },
+        {
+            "type": "fire",
+            "origin": [0.0, 5.3, -14.0],
+            "area": [0.15, 0.1, 0.15],
+            "count": 15,
+            "color": [1.0, 0.7, 0.2, 0.8],
+            "speed": 0.3,
+            "base_size": 6.0
+        },
+        {
+            "type": "fire",
+            "origin": [0.0, 5.3, 10.0],
+            "area": [0.15, 0.1, 0.15],
+            "count": 15,
+            "color": [1.0, 0.7, 0.2, 0.8],
+            "speed": 0.3,
+            "base_size": 6.0
+        },
+        {
+            "type": "dust",
+            "origin": [0.0, 3.0, 0.0],
+            "area": [18.0, 7.0, 18.0],
+            "count": 200,
+            "color": [0.9, 0.8, 0.5, 0.15],
+            "speed": 0.3,
+            "base_size": 3.0
+        },
+        {
+            "type": "fog",
+            "origin": [0.0, 0.5, 0.0],
+            "area": [18.0, 1.5, 18.0],
+            "count": 80,
+            "color": [0.5, 0.5, 0.55, 0.04],
+            "speed": 0.3,
+            "base_size": 15.0
+        }
+    ]
 }
