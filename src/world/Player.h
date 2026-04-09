@@ -40,10 +40,10 @@ private:
     glm::vec3 m_position{0.0f, 0.0f, 0.0f};
     float m_rotation = 0.0f; // Y-axis yaw in radians
     float m_pitch = 0.0f;    // vertical look angle in radians
-    float m_moveSpeed = 3.0f;
+    float m_moveSpeed = 7.0f;
     float m_rotSpeed = 3.0f;
 
-    static constexpr float MOUSE_SENSITIVITY = 0.002f;
+    static constexpr float MOUSE_SENSITIVITY = 0.0015f;
     static constexpr float MAX_PITCH = 1.4835f; // ~85 degrees
 
     // Smooth mouse

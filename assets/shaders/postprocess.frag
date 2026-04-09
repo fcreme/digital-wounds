@@ -41,8 +41,12 @@ void main() {
     color.g = texture(uScreen, vTexCoord).g;
     color.b = texture(uScreen, vTexCoord - center * caStrength).b;
 
+    // --- Detect background pixels (no depth written) ---
+    float depth = texture(uDepthTex, vTexCoord).r;
+    bool isBackground = (depth > 0.95);
+
     // --- SSAO ---
-    if (uSSAOEnabled != 0) {
+    if (uSSAOEnabled != 0 && !isBackground) {
         float ao = texture(uSSAOTex, vTexCoord).r;
         color *= ao;
     }
@@ -52,18 +56,19 @@ void main() {
     color += bloom * uBloomIntensity;
 
     // --- Distance Fog ---
-    if (uFogEnabled != 0) {
-        float depth = texture(uDepthTex, vTexCoord).r;
+    if (uFogEnabled != 0 && !isBackground) {
         float linDepth = linearizeDepth(depth, uNearPlane, uFarPlane);
         float fogFactor = smoothstep(uFogStart, uFogEnd, linDepth);
         color = mix(color, uFogColor, fogFactor);
     }
 
-    // --- Vignette ---
-    vec2 uv = vTexCoord;
-    float dist = distance(uv, vec2(0.5));
-    float vignette = smoothstep(0.7, 0.4, dist);
-    color *= mix(0.3, 1.0, vignette);
+    // --- Vignette (skip for background — it has its own baked vignette) ---
+    if (!isBackground) {
+        vec2 uv = vTexCoord;
+        float dist = distance(uv, vec2(0.5));
+        float vignette = smoothstep(0.7, 0.4, dist);
+        color *= mix(0.3, 1.0, vignette);
+    }
 
     // --- Film grain ---
     float grain = rand(vTexCoord * uResolution + vec2(uTime * 100.0)) * 0.08;
@@ -73,8 +78,10 @@ void main() {
     color.r *= 0.95;
     color.b *= 1.05;
 
-    // --- Slight contrast boost ---
-    color = (color - 0.5) * 1.1 + 0.5;
+    // --- Slight contrast boost (skip for background — already color-graded) ---
+    if (!isBackground) {
+        color = (color - 0.5) * 1.1 + 0.5;
+    }
 
     // --- Dithering (eliminates banding in dark gradients) ---
     // Triangular-distributed dither: smoother than uniform noise

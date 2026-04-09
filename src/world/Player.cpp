@@ -46,12 +46,12 @@ void Player::update(float dt, const InputManager& input, const Camera& camera) {
         movement.z -= forwardZ * m_moveSpeed * dt;
     }
     if (input.isKeyDown(SDL_SCANCODE_A)) {
-        movement.x -= rightX * m_moveSpeed * dt;
-        movement.z -= rightZ * m_moveSpeed * dt;
-    }
-    if (input.isKeyDown(SDL_SCANCODE_D)) {
         movement.x += rightX * m_moveSpeed * dt;
         movement.z += rightZ * m_moveSpeed * dt;
+    }
+    if (input.isKeyDown(SDL_SCANCODE_D)) {
+        movement.x -= rightX * m_moveSpeed * dt;
+        movement.z -= rightZ * m_moveSpeed * dt;
     }
 
     m_position += movement;

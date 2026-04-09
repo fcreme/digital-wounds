@@ -142,10 +142,10 @@ def gen_dark_hallway():
     img = Image.new('RGB', (WIDTH, HEIGHT))
     draw = ImageDraw.Draw(img)
 
-    # Dark interior gradient (warm tones)
-    top_color = (15, 10, 18)
-    mid_color = (28, 18, 22)
-    bottom_color = (18, 12, 10)
+    # Interior gradient (warm tones, well-lit)
+    top_color = (110, 85, 120)
+    mid_color = (160, 120, 135)
+    bottom_color = (140, 105, 85)
 
     for y in range(HEIGHT):
         t = y / HEIGHT
@@ -164,22 +164,22 @@ def gen_dark_hallway():
     # Left wall
     wall_draw.polygon([(0, 0), (vanish_x - 80, vanish_y - 60),
                        (vanish_x - 80, vanish_y + 120), (0, HEIGHT)],
-                     fill=(30, 22, 25, 210))
+                     fill=(200, 160, 140, 255))
 
     # Right wall
     wall_draw.polygon([(WIDTH, 0), (vanish_x + 80, vanish_y - 60),
                        (vanish_x + 80, vanish_y + 120), (WIDTH, HEIGHT)],
-                     fill=(30, 22, 25, 210))
+                     fill=(200, 160, 140, 255))
 
     # Floor
     wall_draw.polygon([(0, HEIGHT), (vanish_x - 80, vanish_y + 120),
                        (vanish_x + 80, vanish_y + 120), (WIDTH, HEIGHT)],
-                     fill=(22, 15, 12, 230))
+                     fill=(180, 140, 110, 255))
 
     # Ceiling
     wall_draw.polygon([(0, 0), (vanish_x - 80, vanish_y - 60),
                        (vanish_x + 80, vanish_y - 60), (WIDTH, 0)],
-                     fill=(18, 14, 20, 210))
+                     fill=(160, 130, 155, 255))
 
     img = Image.alpha_composite(img.convert('RGBA'), wall_layer).convert('RGB')
 
@@ -192,8 +192,8 @@ def gen_dark_hallway():
         (WIDTH // 2 + 120, int(HEIGHT * 0.40)),
     ]
     for gx, gy in glow_positions:
-        for r in range(80, 0, -1):
-            alpha = int(10 * (1 - r / 80))
+        for r in range(120, 0, -1):
+            alpha = int(25 * (1 - r / 120))
             glow_draw = ImageDraw.Draw(glow_layer)
             glow_draw.ellipse([gx - r, gy - r, gx + r, gy + r],
                             fill=(120, 70, 20, alpha))
@@ -225,25 +225,7 @@ def gen_dark_hallway():
     from PIL import ImageChops
     img = ImageChops.add(img, noise_rgb)
 
-    # Heavy vignette for hallway
-    vignette = Image.new('L', (WIDTH, HEIGHT), 255)
-    cx, cy = WIDTH // 2, HEIGHT // 2
-    max_dist = math.sqrt(cx**2 + cy**2)
-    for y in range(0, HEIGHT, 2):
-        for x in range(0, WIDTH, 4):
-            dist = math.sqrt((x - cx)**2 + (y - cy)**2) / max_dist
-            v = max(0, int(255 * (1 - dist * dist * 1.5)))
-            vignette.putpixel((x, y), v)
-            if x + 1 < WIDTH: vignette.putpixel((x + 1, y), v)
-            if x + 2 < WIDTH: vignette.putpixel((x + 2, y), v)
-            if x + 3 < WIDTH: vignette.putpixel((x + 3, y), v)
-            if y + 1 < HEIGHT:
-                vignette.putpixel((x, y + 1), v)
-                if x + 1 < WIDTH: vignette.putpixel((x + 1, y + 1), v)
-                if x + 2 < WIDTH: vignette.putpixel((x + 2, y + 1), v)
-                if x + 3 < WIDTH: vignette.putpixel((x + 3, y + 1), v)
-
-    img = ImageChops.multiply(img, Image.merge('RGB', [vignette, vignette, vignette]))
+    # Vignette handled by post-processing shader — skip baked vignette
 
     return img
 

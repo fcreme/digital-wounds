@@ -262,21 +262,7 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
         m_pointLights.push_back({{-8.0f, 6.0f, -8.0f}, {0.8f, 0.5f, 0.2f}, 20.0f, true});
         m_pointLights.push_back({{8.0f, 6.0f, -8.0f}, {0.8f, 0.5f, 0.2f}, 20.0f, true});
 
-        // Triggers
-        TriggerZone back;
-        back.position = glm::vec3(0.0f, 0.0f, 18.0f);
-        back.radius = 3.0f;
-        back.targetRoom = "assets/rooms/test_room.json";
-        back.spawnPos = glm::vec3(0.0f, 0.0f, -3.0f);
-        m_triggers.push_back(back);
-
-        // Trigger to studio at far end
-        TriggerZone toStudio;
-        toStudio.position = glm::vec3(0.0f, 0.0f, -16.0f);
-        toStudio.radius = 2.5f;
-        toStudio.targetRoom = "assets/rooms/studio.json";
-        toStudio.spawnPos = glm::vec3(0.0f, 0.0f, 3.0f);
-        m_triggers.push_back(toStudio);
+        // Triggers disabled — testing hallway only
 
         // Books
         {
@@ -313,7 +299,7 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
             m_books.push_back(std::move(b));
         }
 
-        m_player.setWorldBounds(-12.0f, 12.0f, -16.0f, 18.0f);
+        m_player.setWorldBounds(-6.0f, 6.0f, -13.0f, 15.0f);
 
         renderer.getPostProcess().setFogParams(
             glm::vec3(0.02f, 0.02f, 0.04f), 15.0f, 40.0f, 0.1f, 100.0f);
@@ -531,7 +517,7 @@ void Scene::update(float dt, const InputManager& input, Renderer& renderer, Audi
 
     // Camera update: FP or fixed
     if (m_currentRoom.firstPerson) {
-        float eyeHeight = 1.6f + m_player.getHeadBob();
+        float eyeHeight = 3.0f + m_player.getHeadBob();
         m_camera.updateFromPlayer(m_player.getPosition(), eyeHeight,
                                   m_player.getSmoothYaw(), m_player.getSmoothPitch());
     }
