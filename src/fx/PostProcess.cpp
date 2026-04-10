@@ -13,8 +13,8 @@ bool PostProcess::init(int width, int height) {
     m_height = height;
     m_bloomWidth = width / 2;
     m_bloomHeight = height / 2;
-    m_ssaoWidth = width / 2;
-    m_ssaoHeight = height / 2;
+    m_ssaoWidth = width;
+    m_ssaoHeight = height;
 
     if (!m_shader.loadFromFile("assets/shaders/postprocess.vert", "assets/shaders/postprocess.frag")) {
         std::cerr << "PostProcess: failed to load shaders\n";
@@ -427,8 +427,8 @@ void PostProcess::onResize(int width, int height) {
     m_height = height;
     m_bloomWidth = width / 2;
     m_bloomHeight = height / 2;
-    m_ssaoWidth = width / 2;
-    m_ssaoHeight = height / 2;
+    m_ssaoWidth = width;
+    m_ssaoHeight = height;
     destroyFBO();
     destroyBloomFBOs();
     destroySSAOResources();

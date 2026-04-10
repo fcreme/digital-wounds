@@ -33,9 +33,11 @@ float linearizeDepth(float d, float near, float far) {
 void main() {
     // --- Chromatic aberration ---
     // Offset increases toward screen edges for a lens-like distortion
+    // Aspect-correct the UV so strength is consistent at any resolution
     vec2 center = vTexCoord - 0.5;
-    float edgeDist = dot(center, center); // squared distance from center
-    float caStrength = edgeDist * 0.008;  // subtle — ramps at edges only
+    vec2 aspect = vec2(uResolution.x / uResolution.y, 1.0);
+    float edgeDist = dot(center * aspect, center * aspect);
+    float caStrength = edgeDist * 0.006;
     vec3 color;
     color.r = texture(uScreen, vTexCoord + center * caStrength).r;
     color.g = texture(uScreen, vTexCoord).g;
@@ -71,8 +73,9 @@ void main() {
     }
 
     // --- Film grain ---
-    float grain = rand(vTexCoord * uResolution + vec2(uTime * 100.0)) * 0.08;
-    color += grain - 0.04;
+    // Spatiotemporal noise: spatial hash + slow time drift to reduce shimmer
+    float grain = rand(floor(vTexCoord * uResolution) + vec2(floor(uTime * 8.0))) * 0.03;
+    color += grain - 0.015;
 
     // --- Subtle color grading (push toward cold tones) ---
     color.r *= 0.95;
@@ -84,10 +87,10 @@ void main() {
     }
 
     // --- Dithering (eliminates banding in dark gradients) ---
-    // Triangular-distributed dither: smoother than uniform noise
-    float dither1 = rand(vTexCoord * uResolution + vec2(uTime * 37.0));
-    float dither2 = rand(vTexCoord * uResolution + vec2(uTime * 71.0 + 0.5));
-    vec3 dither = vec3((dither1 + dither2 - 1.0) / 255.0);
+    // Triangular-distributed dither scaled to one 8-bit LSB (1/255)
+    float dither1 = rand(floor(vTexCoord * uResolution) + vec2(floor(uTime * 4.0) * 37.0));
+    float dither2 = rand(floor(vTexCoord * uResolution) + vec2(floor(uTime * 4.0) * 71.0 + 0.5));
+    vec3 dither = vec3(dither1 + dither2 - 1.0) / 255.0;
     color += dither;
 
     FragColor = vec4(clamp(color, 0.0, 1.0), 1.0);

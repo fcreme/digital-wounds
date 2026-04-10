@@ -4,6 +4,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <cmath>
 #include <cstdlib>
+#include <ctime>
 #include <iostream>
 
 namespace dw {
@@ -17,6 +18,8 @@ static float randRange(float lo, float hi) {
 }
 
 bool ParticleSystem::init() {
+    srand(static_cast<unsigned int>(time(nullptr)));
+
     if (!m_shader.loadFromFile("assets/shaders/particle.vert", "assets/shaders/particle.frag")) {
         std::cerr << "ParticleSystem: failed to load shaders\n";
         return false;
@@ -114,17 +117,18 @@ void ParticleSystem::update(float dt) {
 
         switch (p.type) {
             case ParticleType::Dust:
+                // Respawn before updating position so there's no pop at origin
+                if (p.life >= 1.0f) { respawn(p); break; }
                 // Gentle sine wobble
                 p.position.x += std::sin(m_time * 0.5f + p.phaseOffset) * 0.01f;
                 p.alpha = 0.2f * (1.0f - std::abs(p.life * 2.0f - 1.0f)); // fade in/out
-                if (p.life > 1.0f) respawn(p);
                 break;
 
             case ParticleType::Fog:
+                if (p.life >= 1.0f) { respawn(p); break; }
                 p.position.x += std::sin(m_time * 0.2f + p.phaseOffset) * 0.02f;
                 p.position.z += std::cos(m_time * 0.15f + p.phaseOffset * 1.3f) * 0.015f;
                 p.alpha = 0.06f * (1.0f - std::abs(p.life * 2.0f - 1.0f));
-                if (p.life > 1.0f) respawn(p);
                 break;
 
             case ParticleType::Fireflies:

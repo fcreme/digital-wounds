@@ -10,7 +10,8 @@ Shader::~Shader() {
     if (m_program != 0) glDeleteProgram(m_program);
 }
 
-Shader::Shader(Shader&& other) noexcept : m_program(other.m_program) {
+Shader::Shader(Shader&& other) noexcept
+    : m_program(other.m_program), m_uniformCache(std::move(other.m_uniformCache)) {
     other.m_program = 0;
 }
 
@@ -18,6 +19,7 @@ Shader& Shader::operator=(Shader&& other) noexcept {
     if (this != &other) {
         if (m_program != 0) glDeleteProgram(m_program);
         m_program = other.m_program;
+        m_uniformCache = std::move(other.m_uniformCache);
         other.m_program = 0;
     }
     return *this;
@@ -43,6 +45,7 @@ bool Shader::loadFromFile(const std::string& vertPath, const std::string& fragPa
 }
 
 bool Shader::loadFromSource(const std::string& vertSrc, const std::string& fragSrc) {
+    m_uniformCache.clear();
     GLuint vert = compileShader(GL_VERTEX_SHADER, vertSrc);
     if (vert == 0) return false;
 
@@ -74,6 +77,9 @@ void Shader::setVec3(const std::string& name, float x, float y, float z) const {
 }
 void Shader::setVec4(const std::string& name, float x, float y, float z, float w) const {
     glUniform4f(getUniformLocation(name), x, y, z, w);
+}
+void Shader::setMat3(const std::string& name, const float* value) const {
+    glUniformMatrix3fv(getUniformLocation(name), 1, GL_FALSE, value);
 }
 void Shader::setMat4(const std::string& name, const float* value) const {
     glUniformMatrix4fv(getUniformLocation(name), 1, GL_FALSE, value);
@@ -123,7 +129,11 @@ bool Shader::linkProgram(GLuint vert, GLuint frag) {
 }
 
 GLint Shader::getUniformLocation(const std::string& name) const {
-    return glGetUniformLocation(m_program, name.c_str());
+    auto it = m_uniformCache.find(name);
+    if (it != m_uniformCache.end()) return it->second;
+    GLint loc = glGetUniformLocation(m_program, name.c_str());
+    m_uniformCache[name] = loc;
+    return loc;
 }
 
 } // namespace dw

@@ -4,6 +4,7 @@
 #include "scene/Scene.h"
 #include "audio/AudioManager.h"
 #include "ui/UIOverlay.h"
+#include "ui/TitleScreen.h"
 
 #include <glad/gl.h>
 #include <SDL.h>
@@ -97,15 +98,13 @@ bool Engine::init(const std::string& title, int width, int height) {
         return false;
     }
 
-    // Scene
-    m_scene = std::make_unique<Scene>();
-    if (!m_scene->init(*m_renderer)) {
-        std::cerr << "Failed to init scene\n";
+    // Title screen (scene is deferred until player presses Enter)
+    m_titleScreen = std::make_unique<TitleScreen>();
+    if (!m_titleScreen->init(m_windowWidth, m_windowHeight)) {
+        std::cerr << "Failed to init title screen\n";
         return false;
     }
-
-    m_scene->setAudioManager(m_audio.get());
-    m_scene->loadRoom("assets/rooms/hallway.json", *m_renderer);
+    m_gameState = GameState::TitleScreen;
 
     m_running = true;
     return true;
@@ -142,7 +141,7 @@ void Engine::processEvents() {
             case SDL_KEYDOWN:
                 m_inputManager->onKeyDown(event.key.keysym.scancode);
                 if (event.key.keysym.sym == SDLK_ESCAPE) m_running = false;
-                if (event.key.keysym.sym == SDLK_F1) {
+                if (m_gameState == GameState::Playing && event.key.keysym.sym == SDLK_F1) {
                     auto& pp = m_renderer->getPostProcess();
                     pp.setSSAODebugView(!pp.getSSAODebugView());
                     std::cout << "SSAO debug view: " << (pp.getSSAODebugView() ? "ON" : "OFF") << "\n";
@@ -166,6 +165,7 @@ void Engine::processEvents() {
                     m_windowHeight = event.window.data2;
                     m_renderer->onResize(m_windowWidth, m_windowHeight);
                     if (m_ui) m_ui->onResize(m_windowWidth, m_windowHeight);
+                    if (m_titleScreen) m_titleScreen->onResize(m_windowWidth, m_windowHeight);
                 }
                 break;
         }
@@ -173,51 +173,99 @@ void Engine::processEvents() {
 }
 
 void Engine::update(float dt) {
-    m_scene->update(dt, *m_inputManager, *m_renderer, m_audio.get(), m_ui.get());
+    switch (m_gameState) {
+        case GameState::TitleScreen:
+            m_titleScreen->update(dt, *m_inputManager);
+            if (m_titleScreen->isFinished()) {
+                startGame();
+            }
+            break;
+        case GameState::Playing:
+            m_scene->update(dt, *m_inputManager, *m_renderer, m_audio.get(), m_ui.get());
+            break;
+    }
 }
 
 void Engine::render() {
-    // 1. Shadow map pass (render from light's perspective)
-    m_renderer->renderShadowPass(*m_scene, m_scene->getCurrentRoom().lightDir);
+    switch (m_gameState) {
+        case GameState::TitleScreen:
+            renderTitleScreen();
+            break;
+        case GameState::Playing: {
+            // 1. Shadow map pass (render from light's perspective)
+            m_renderer->renderShadowPass(*m_scene, m_scene->getCurrentRoom().lightDir);
 
-    // 2. Main scene (to PostProcess FBO)
-    m_renderer->beginFrame();
+            // 2. Main scene (to PostProcess FBO)
+            m_renderer->beginFrame();
 
-    // 3. Pre-rendered background (depth write off)
-    m_renderer->renderBackground();
+            // 3. Pre-rendered background (depth write off)
+            m_renderer->renderBackground();
 
-    // 4. FMV overlays (animated atmospheric effects on background)
-    m_scene->renderFMVOverlays();
+            // 4. FMV overlays (animated atmospheric effects on background)
+            m_scene->renderFMVOverlays();
 
-    // 5. Depth pre-pass (hidden geometry for occlusion)
-    m_renderer->renderDepthPrePass(*m_scene, m_scene->getCamera());
+            // 5. Depth pre-pass (hidden geometry for occlusion)
+            m_renderer->renderDepthPrePass(*m_scene, m_scene->getCamera());
 
-    // 5. Bind shadow map + render 3D objects
-    m_scene->bindShadowUniforms(m_renderer->getShadowMap());
-    m_scene->renderObjects();
+            // 5. Bind shadow map + render 3D objects
+            m_scene->bindShadowUniforms(m_renderer->getShadowMap());
+            m_scene->renderObjects();
 
-    // 6. Particles (fog, dust, fireflies) — pass depth texture for soft particles
-    {
-        auto& pp = m_renderer->getPostProcess();
-        m_scene->getParticleSystem().setDepthTexture(
-            pp.getDepthTexture(), pp.getNearPlane(), pp.getFarPlane(),
-            m_windowWidth, m_windowHeight);
-    }
-    m_scene->renderParticles();
+            // 6. Particles (fog, dust, fireflies) — pass depth texture for soft particles
+            {
+                auto& pp = m_renderer->getPostProcess();
+                m_scene->getParticleSystem().setDepthTexture(
+                    pp.getDepthTexture(), pp.getNearPlane(), pp.getFarPlane(),
+                    m_windowWidth, m_windowHeight);
+            }
+            m_scene->renderParticles();
 
-    // 7. Post-processing (SSAO + bloom + fog) → screen
-    m_renderer->endFrame(m_totalTime, m_scene->getCamera().getProjection());
+            // 7. Post-processing (SSAO + bloom + fog) → screen
+            m_renderer->endFrame(m_totalTime, m_scene->getCamera().getProjection());
 
-    // 8. Overlays (room transition fade)
-    m_scene->renderOverlays();
+            // 8. Overlays (room transition fade)
+            m_scene->renderOverlays();
 
-    // 9. UI (prompts, book viewer)
-    if (m_ui) {
-        m_scene->renderUI(*m_ui, m_windowWidth, m_windowHeight);
+            // 9. UI (prompts, book viewer)
+            if (m_ui) {
+                m_scene->renderUI(*m_ui, m_windowWidth, m_windowHeight);
+            }
+            break;
+        }
     }
 }
 
+void Engine::renderTitleScreen() {
+    // Render directly to the default framebuffer (no post-processing)
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glViewport(0, 0, m_windowWidth, m_windowHeight);
+    m_titleScreen->render(*m_ui, m_windowWidth, m_windowHeight);
+}
+
+void Engine::startGame() {
+    std::cout << "Starting game...\n";
+
+    // Shut down title screen
+    m_titleScreen->shutdown();
+    m_titleScreen.reset();
+
+    // Create and init scene
+    m_scene = std::make_unique<Scene>();
+    if (!m_scene->init(*m_renderer)) {
+        std::cerr << "Failed to init scene\n";
+        m_running = false;
+        return;
+    }
+
+    m_scene->setAudioManager(m_audio.get());
+    m_scene->loadRoom("assets/rooms/hallway.json", *m_renderer);
+
+    m_gameState = GameState::Playing;
+}
+
 void Engine::shutdown() {
+    if (m_titleScreen) m_titleScreen->shutdown();
+    m_titleScreen.reset();
     if (m_scene) m_scene->shutdown();
     m_scene.reset();
     if (m_ui) m_ui->shutdown();

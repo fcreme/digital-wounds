@@ -93,7 +93,7 @@ void AudioManager::generateFootstepSound() {
     const int numFrames = static_cast<int>(sampleRate * duration);
 
     // Random engine for noise
-    std::mt19937 rng(42); // fixed seed for reproducible sound
+    std::mt19937 rng(std::random_device{}());
     std::uniform_real_distribution<float> noiseDist(-1.0f, 1.0f);
 
     // Generate mono samples first

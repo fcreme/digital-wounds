@@ -43,15 +43,21 @@ void RoomTransition::startTransition(float duration, std::function<void()> onMid
     m_onMidpoint = std::move(onMidpoint);
 }
 
+void RoomTransition::onResize(int w, int h) {
+    m_viewportW = w;
+    m_viewportH = h;
+}
+
 void RoomTransition::update(float dt) {
     if (!m_active) return;
 
     m_timer += dt;
     float halfDuration = m_duration * 0.5f;
 
+    float linearAlpha;
     if (m_timer < halfDuration) {
         // Fade to black
-        m_alpha = m_timer / halfDuration;
+        linearAlpha = m_timer / halfDuration;
     } else {
         // Fire midpoint callback (load new room)
         if (!m_midpointFired) {
@@ -59,10 +65,12 @@ void RoomTransition::update(float dt) {
             if (m_onMidpoint) m_onMidpoint();
         }
         // Fade from black
-        m_alpha = 1.0f - (m_timer - halfDuration) / halfDuration;
+        linearAlpha = 1.0f - (m_timer - halfDuration) / halfDuration;
     }
 
-    m_alpha = std::clamp(m_alpha, 0.0f, 1.0f);
+    linearAlpha = std::clamp(linearAlpha, 0.0f, 1.0f);
+    // Smooth ease-in-out curve
+    m_alpha = linearAlpha * linearAlpha * (3.0f - 2.0f * linearAlpha);
 
     if (m_timer >= m_duration) {
         m_active = false;
@@ -79,10 +87,7 @@ void RoomTransition::render() {
 
     m_shader.use();
     m_shader.setFloat("uAlpha", m_alpha);
-
-    GLint viewport[4];
-    glGetIntegerv(GL_VIEWPORT, viewport);
-    m_shader.setVec2("uResolution", static_cast<float>(viewport[2]), static_cast<float>(viewport[3]));
+    m_shader.setVec2("uResolution", static_cast<float>(m_viewportW), static_cast<float>(m_viewportH));
 
     glBindVertexArray(m_vao);
     glDrawArrays(GL_TRIANGLES, 0, 6);

@@ -131,8 +131,8 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
         m_props.push_back(std::move(ground));
 
         // Point lights (lanterns near pillars)
-        m_pointLights.push_back({{-2.0f, 2.0f, -1.0f}, {0.9f, 0.6f, 0.2f}, 6.0f, true});
-        m_pointLights.push_back({{2.0f, 2.0f, -1.0f}, {0.9f, 0.6f, 0.2f}, 6.0f, true});
+        m_pointLights.push_back({{-2.0f, 2.0f, -1.0f}, {0.9f, 0.6f, 0.2f}, 6.0f, 6.0f, true});
+        m_pointLights.push_back({{2.0f, 2.0f, -1.0f}, {0.9f, 0.6f, 0.2f}, 6.0f, 6.0f, true});
 
         // Trigger
         TriggerZone door;
@@ -257,10 +257,10 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
         addRope(-5.0f, 8.0f, 5.0f, 8.0f, 0.85f);
 
         // Warm lantern lights
-        m_pointLights.push_back({{-8.0f, 6.0f, 4.0f}, {1.0f, 0.7f, 0.3f}, 25.0f, true});
-        m_pointLights.push_back({{8.0f, 6.0f, 4.0f}, {1.0f, 0.7f, 0.3f}, 25.0f, true});
-        m_pointLights.push_back({{-8.0f, 6.0f, -8.0f}, {0.8f, 0.5f, 0.2f}, 20.0f, true});
-        m_pointLights.push_back({{8.0f, 6.0f, -8.0f}, {0.8f, 0.5f, 0.2f}, 20.0f, true});
+        m_pointLights.push_back({{-8.0f, 6.0f, 4.0f}, {1.0f, 0.7f, 0.3f}, 25.0f, 25.0f, true});
+        m_pointLights.push_back({{8.0f, 6.0f, 4.0f}, {1.0f, 0.7f, 0.3f}, 25.0f, 25.0f, true});
+        m_pointLights.push_back({{-8.0f, 6.0f, -8.0f}, {0.8f, 0.5f, 0.2f}, 20.0f, 20.0f, true});
+        m_pointLights.push_back({{8.0f, 6.0f, -8.0f}, {0.8f, 0.5f, 0.2f}, 20.0f, 20.0f, true});
 
         // Triggers disabled — testing hallway only
 
@@ -405,7 +405,7 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
         candle->materialColor = glm::vec3(0.9f, 0.85f, 0.7f); // white-ish wax
         m_props.push_back(std::move(candle));
 
-        m_pointLights.push_back({{0.6f, 0.6f, -2.0f}, {1.0f, 0.8f, 0.4f}, 6.0f, true});
+        m_pointLights.push_back({{0.6f, 0.6f, -2.0f}, {1.0f, 0.8f, 0.4f}, 6.0f, 6.0f, true});
 
         // Ceiling light (dim, overhead)
         m_pointLights.push_back({{0.0f, 2.8f, 0.0f}, {0.4f, 0.35f, 0.3f}, 8.0f, false});
@@ -599,10 +599,9 @@ void Scene::update(float dt, const InputManager& input, Renderer& renderer, Audi
     // Flicker point lights
     for (auto& light : m_pointLights) {
         if (light.flicker) {
-            // Subtle random intensity variation
             float flicker = 0.9f + 0.1f * std::sin(m_propTime * 8.0f + light.position.x * 7.0f)
                           + 0.05f * std::sin(m_propTime * 13.0f + light.position.z * 11.0f);
-            light.radius = light.radius * flicker / (0.9f + 0.1f); // normalize
+            light.radius = light.baseRadius * flicker;
         }
     }
 
@@ -645,6 +644,10 @@ void Scene::renderObjects() {
     m_meshShader.setMat4("uView", glm::value_ptr(m_camera.getView()));
     m_meshShader.setMat4("uProjection", glm::value_ptr(m_camera.getProjection()));
 
+    // Camera position for specular
+    glm::vec3 camPos = m_camera.getPosition();
+    m_meshShader.setVec3("uViewPos", camPos.x, camPos.y, camPos.z);
+
     // Directional light
     m_meshShader.setVec3("uAmbient", m_currentRoom.ambientColor.x, m_currentRoom.ambientColor.y, m_currentRoom.ambientColor.z);
     m_meshShader.setVec3("uLightDir", m_currentRoom.lightDir.x, m_currentRoom.lightDir.y, m_currentRoom.lightDir.z);
@@ -665,6 +668,8 @@ void Scene::renderObjects() {
     // Render props
     for (const auto& prop : m_props) {
         m_meshShader.setMat4("uModel", glm::value_ptr(prop->transform));
+        glm::mat3 normalMatrix = glm::transpose(glm::inverse(glm::mat3(prop->transform)));
+        m_meshShader.setMat3("uNormalMatrix", glm::value_ptr(normalMatrix));
 
         // Highlight for book-linked props
         float highlight = (prop->bookIndex >= 0 && prop->bookIndex == m_nearBookIndex) ? m_highlightAmount : 0.0f;

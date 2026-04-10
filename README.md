@@ -1,6 +1,6 @@
 # Digital Wounds
 
-> A Resident Evil Remake-style native C++ experience showcasing tattoo artist portfolios through interactive books in a dark atmospheric environment.
+> A Resident Evil Remake-style native C++ dark atmospheric experience with interactive books and cinematic environments.
 
 **Status: Work in Progress**
 

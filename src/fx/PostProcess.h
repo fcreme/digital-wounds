@@ -62,7 +62,7 @@ private:
     int m_bloomHeight = 360;
 
     static constexpr int BLUR_PASSES = 5;
-    static constexpr float BLOOM_THRESHOLD = 0.8f;
+    static constexpr float BLOOM_THRESHOLD = 1.2f;
     static constexpr float BLOOM_INTENSITY = 0.35f;
 
     // SSAO
@@ -76,8 +76,8 @@ private:
     std::vector<glm::vec3> m_ssaoKernel;
     bool m_ssaoEnabled = true;
     bool m_ssaoDebugView = false;
-    int m_ssaoWidth = 640;
-    int m_ssaoHeight = 360;
+    int m_ssaoWidth = 1280;
+    int m_ssaoHeight = 720;
 
     static constexpr int SSAO_KERNEL_SIZE = 32;
     static constexpr float SSAO_RADIUS = 1.5f;

@@ -20,6 +20,7 @@ struct PointLightDef {
     glm::vec3 position{0.0f};
     glm::vec3 color{1.0f};
     float radius = 5.0f;
+    float baseRadius = 5.0f;  // unflickered radius for animation
     bool flicker = false;
 };
 

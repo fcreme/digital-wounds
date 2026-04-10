@@ -25,6 +25,9 @@ uniform float uPointLightRadius[MAX_POINT_LIGHTS];
 // Material color (used when no texture)
 uniform vec3 uMaterialColor;
 
+// Camera position for specular
+uniform vec3 uViewPos;
+
 // Interaction highlight (0 = none, 1 = full glow)
 uniform float uHighlight;
 
@@ -43,21 +46,29 @@ float calculateShadow(vec4 fragPosLightSpace) {
 
     float currentDepth = projCoords.z;
 
-    // Bias based on surface angle to light
+    // Bias based on surface angle to light, scaled by texel size
     vec3 normal = normalize(vNormal);
     vec3 lightDir = normalize(-uLightDir);
-    float bias = max(0.005 * (1.0 - dot(normal, lightDir)), 0.001);
+    float bias = max(0.005 * (1.0 - dot(normal, lightDir)), 0.0005);
 
-    // PCF 3x3
-    float shadow = 0.0;
+    // PCF 5x5 with Poisson disk sampling for soft shadow edges
     vec2 texelSize = 1.0 / textureSize(uShadowMap, 0);
-    for (int x = -1; x <= 1; x++) {
-        for (int y = -1; y <= 1; y++) {
-            float pcfDepth = texture(uShadowMap, projCoords.xy + vec2(x, y) * texelSize).r;
-            shadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;
-        }
+    const vec2 poissonDisk[16] = vec2[](
+        vec2(-0.94201, -0.39906), vec2( 0.94558, -0.76890),
+        vec2(-0.09418, -0.92938), vec2( 0.34495,  0.29387),
+        vec2(-0.91588, -0.45771), vec2(-0.81544,  0.48568),
+        vec2(-0.38277, -0.56870), vec2( 0.44323, -0.97511),
+        vec2( 0.53742,  0.01228), vec2( 0.72843, -0.17972),
+        vec2(-0.69710,  0.32609), vec2( 0.18908, -0.55507),
+        vec2(-0.23237,  0.12544), vec2( 0.04795,  0.86584),
+        vec2(-0.57734, -0.00453), vec2( 0.67516,  0.60655)
+    );
+    float shadow = 0.0;
+    for (int i = 0; i < 16; i++) {
+        float pcfDepth = texture(uShadowMap, projCoords.xy + poissonDisk[i] * texelSize * 2.0).r;
+        shadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;
     }
-    shadow /= 9.0;
+    shadow /= 16.0;
 
     // 70% shadow intensity (not full black)
     return shadow * 0.7;
@@ -77,7 +88,12 @@ void main() {
     }
 
     // Directional light contribution
+    vec3 viewDir = normalize(uViewPos - vWorldPos);
     float diff = max(dot(normal, lightDir), 0.0);
+
+    // Blinn-Phong specular for directional light
+    vec3 halfDir = normalize(lightDir + viewDir);
+    float spec = pow(max(dot(normal, halfDir), 0.0), 32.0);
 
     // Shadow attenuation on directional light
     float shadow = 0.0;
@@ -85,7 +101,8 @@ void main() {
         shadow = calculateShadow(vFragPosLightSpace);
     }
 
-    vec3 result = uAmbient * baseColor + (1.0 - shadow) * diff * uLightColor * baseColor;
+    vec3 result = uAmbient * baseColor
+                + (1.0 - shadow) * (diff * uLightColor * baseColor + spec * uLightColor * 0.25);
 
     // Point light contributions (not affected by directional shadow map)
     for (int i = 0; i < uNumPointLights && i < MAX_POINT_LIGHTS; i++) {
@@ -98,7 +115,12 @@ void main() {
         atten *= atten; // quadratic falloff
 
         float ndotl = max(dot(normal, lightVec), 0.0);
-        result += ndotl * atten * uPointLightColor[i] * baseColor;
+
+        // Blinn-Phong specular for point lights
+        vec3 ptHalf = normalize(lightVec + viewDir);
+        float ptSpec = pow(max(dot(normal, ptHalf), 0.0), 32.0);
+
+        result += atten * (ndotl * uPointLightColor[i] * baseColor + ptSpec * uPointLightColor[i] * 0.15);
     }
 
     // Interaction highlight: emissive rim glow
