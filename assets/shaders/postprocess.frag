@@ -39,9 +39,9 @@ void main() {
     float edgeDist = dot(center * aspect, center * aspect);
     float caStrength = edgeDist * 0.006;
     vec3 color;
-    color.r = texture(uScreen, vTexCoord + center * caStrength).r;
+    color.r = texture(uScreen, vTexCoord + center * caStrength * 1.2).r;
     color.g = texture(uScreen, vTexCoord).g;
-    color.b = texture(uScreen, vTexCoord - center * caStrength).b;
+    color.b = texture(uScreen, vTexCoord - center * caStrength * 0.8).b;
 
     // --- Detect background pixels (no depth written) ---
     float depth = texture(uDepthTex, vTexCoord).r;
@@ -50,6 +50,7 @@ void main() {
     // --- SSAO ---
     if (uSSAOEnabled != 0 && !isBackground) {
         float ao = texture(uSSAOTex, vTexCoord).r;
+        ao = pow(ao, 1.2); // deepen ambient occlusion
         color *= ao;
     }
 
@@ -60,16 +61,16 @@ void main() {
     // --- Distance Fog ---
     if (uFogEnabled != 0 && !isBackground) {
         float linDepth = linearizeDepth(depth, uNearPlane, uFarPlane);
-        float fogFactor = smoothstep(uFogStart, uFogEnd, linDepth);
+        float fogFactor = 1.0 - exp(-pow(linDepth / uFogEnd, 2.0) * uFogStart);
         color = mix(color, uFogColor, fogFactor);
     }
 
-    // --- Vignette (skip for background — it has its own baked vignette) ---
-    if (!isBackground) {
-        vec2 uv = vTexCoord;
-        float dist = distance(uv, vec2(0.5));
+    // --- Vignette (aspect-correct, applied globally) ---
+    {
+        vec2 uv = (vTexCoord - 0.5) * vec2(uResolution.x / uResolution.y, 1.0);
+        float dist = length(uv);
         float vignette = smoothstep(0.7, 0.4, dist);
-        color *= mix(0.3, 1.0, vignette);
+        color *= mix(0.5, 1.0, vignette);
     }
 
     // --- Film grain ---
@@ -77,14 +78,15 @@ void main() {
     float grain = rand(floor(vTexCoord * uResolution) + vec2(floor(uTime * 8.0))) * 0.03;
     color += grain - 0.015;
 
-    // --- Subtle color grading (push toward cold tones) ---
-    color.r *= 0.95;
-    color.b *= 1.05;
-
-    // --- Slight contrast boost (skip for background — already color-graded) ---
-    if (!isBackground) {
-        color = (color - 0.5) * 1.1 + 0.5;
+    // --- Color grading: desaturation + cold tint for cinematic look ---
+    {
+        float lum = dot(color, vec3(0.2126, 0.7152, 0.0722));
+        color = mix(color, vec3(lum), 0.15); // 15% desaturation
+        color *= vec3(0.92, 0.96, 1.08);     // cold blue tint
     }
+
+    // --- Contrast boost (applied globally to avoid 3D/background seam) ---
+    color = (color - 0.5) * 1.15 + 0.5;
 
     // --- Dithering (eliminates banding in dark gradients) ---
     // Triangular-distributed dither scaled to one 8-bit LSB (1/255)

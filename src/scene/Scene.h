@@ -73,6 +73,7 @@ private:
         glm::mat4 transform{1.0f};
         float rotationSpeed = 0.0f;
         glm::vec3 materialColor{0.5f, 0.5f, 0.5f};
+        float roughness = 0.7f;  // 0 = mirror, 1 = matte
         int bookIndex = -1;  // if this prop represents a book, link to m_books index
     };
     std::vector<std::unique_ptr<PropInstance>> m_props;

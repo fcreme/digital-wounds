@@ -101,6 +101,12 @@ bool Model::load(const std::string& path) {
                 submesh->baseColor = glm::vec3(baseColor.r, baseColor.g, baseColor.b);
             }
 
+            // PBR roughness (glTF)
+            float roughness;
+            if (mat->Get(AI_MATKEY_ROUGHNESS_FACTOR, roughness) == AI_SUCCESS) {
+                submesh->roughness = roughness;
+            }
+
             // Diffuse texture
             if (mat->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
                 aiString texPath;
@@ -148,6 +154,7 @@ void Model::draw(Shader& shader) const {
         bool hasTex = sub->texture.getID() != 0;
         shader.setInt("uHasTexture", hasTex ? 1 : 0);
         shader.setVec3("uMaterialColor", sub->baseColor.x, sub->baseColor.y, sub->baseColor.z);
+        shader.setFloat("uRoughness", sub->roughness);
         if (hasTex) {
             sub->texture.bind(GL_TEXTURE0);
             shader.setInt("uDiffuse", 0);

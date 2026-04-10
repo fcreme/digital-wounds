@@ -76,5 +76,5 @@ void main() {
 
     occlusion = 1.0 - (occlusion / float(sampleCount));
     // Power curve to intensify AO for dark atmospheric look
-    FragColor = pow(occlusion, 1.5);
+    FragColor = pow(occlusion, 2.0);
 }

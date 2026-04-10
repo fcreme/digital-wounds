@@ -15,8 +15,8 @@ uniform vec3 uLightDir;
 uniform vec3 uLightColor;
 uniform vec3 uAmbient;
 
-// Point lights (up to 4)
-#define MAX_POINT_LIGHTS 4
+// Point lights (up to 8)
+#define MAX_POINT_LIGHTS 8
 uniform int uNumPointLights;
 uniform vec3 uPointLightPos[MAX_POINT_LIGHTS];
 uniform vec3 uPointLightColor[MAX_POINT_LIGHTS];
@@ -27,6 +27,9 @@ uniform vec3 uMaterialColor;
 
 // Camera position for specular
 uniform vec3 uViewPos;
+
+// Material roughness (0 = mirror, 1 = matte)
+uniform float uRoughness;
 
 // Interaction highlight (0 = none, 1 = full glow)
 uniform float uHighlight;
@@ -92,8 +95,9 @@ void main() {
     float diff = max(dot(normal, lightDir), 0.0);
 
     // Blinn-Phong specular for directional light
+    float shininess = pow(2.0, (1.0 - uRoughness) * 10.0);
     vec3 halfDir = normalize(lightDir + viewDir);
-    float spec = pow(max(dot(normal, halfDir), 0.0), 32.0);
+    float spec = pow(max(dot(normal, halfDir), 0.0), shininess);
 
     // Shadow attenuation on directional light
     float shadow = 0.0;
@@ -118,7 +122,7 @@ void main() {
 
         // Blinn-Phong specular for point lights
         vec3 ptHalf = normalize(lightVec + viewDir);
-        float ptSpec = pow(max(dot(normal, ptHalf), 0.0), 32.0);
+        float ptSpec = pow(max(dot(normal, ptHalf), 0.0), shininess);
 
         result += atten * (ndotl * uPointLightColor[i] * baseColor + ptSpec * uPointLightColor[i] * 0.15);
     }

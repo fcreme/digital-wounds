@@ -29,6 +29,7 @@ private:
         Mesh mesh;
         Texture texture;
         glm::vec3 baseColor{1.0f};
+        float roughness = 0.5f;  // 0 = mirror, 1 = matte
     };
     std::vector<std::unique_ptr<SubMesh>> m_submeshes;
 };

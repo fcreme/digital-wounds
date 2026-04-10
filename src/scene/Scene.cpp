@@ -110,6 +110,7 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
             p->mesh = Mesh::createCube(1.0f);
             p->transform = glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(x, 0.75f, z)), glm::vec3(0.5f, 1.5f, 0.5f));
             p->materialColor = glm::vec3(0.25f, 0.23f, 0.22f);
+            p->roughness = 0.9f; // rough stone
             m_props.push_back(std::move(p));
         };
         addPillar(-2.0f, -1.0f);
@@ -121,6 +122,7 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
         book->transform = glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 1.2f, -2.0f)), glm::vec3(0.6f, 0.05f, 0.4f));
         book->rotationSpeed = 0.8f;
         book->materialColor = glm::vec3(0.4f, 0.2f, 0.1f); // leather brown
+        book->roughness = 0.5f; // semi-smooth leather
         m_props.push_back(std::move(book));
 
         // Ground plane
@@ -128,6 +130,7 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
         ground->mesh = Mesh::createPlane(12.0f, 12.0f);
         ground->transform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f));
         ground->materialColor = glm::vec3(0.08f, 0.1f, 0.06f); // dark earth
+        ground->roughness = 0.85f; // rough earth
         m_props.push_back(std::move(ground));
 
         // Point lights (lanterns near pillars)
@@ -155,8 +158,9 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
         m_player.setWorldBounds(-4.0f, 4.0f, -4.5f, 4.0f);
 
         // Fog params for outdoor forest (lighter, farther)
+        // Exponential fog: uFogStart=density, uFogEnd=max distance
         renderer.getPostProcess().setFogParams(
-            glm::vec3(0.03f, 0.04f, 0.05f), 20.0f, 50.0f, 0.1f, 100.0f);
+            glm::vec3(0.03f, 0.04f, 0.05f), 3.0f, 50.0f, 0.1f, 100.0f);
     }
     else if (m_currentRoom.name == "Dark Hallway") {
         // Picture Gallery GLB model — scaled up so player is inside the room
@@ -186,6 +190,7 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
             l->mesh = Mesh::createCube(1.0f);
             l->transform = glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(lp.x, lp.y, lp.z)), glm::vec3(0.3f, 0.5f, 0.3f));
             l->materialColor = glm::vec3(0.6f, 0.4f, 0.1f);
+            l->roughness = 0.2f; // polished bronze
             m_props.push_back(std::move(l));
         }
 
@@ -194,6 +199,7 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
         table->mesh = Mesh::createCube(1.0f);
         table->transform = glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.5f, 0.0f)), glm::vec3(1.5f, 0.06f, 0.8f));
         table->materialColor = glm::vec3(0.3f, 0.18f, 0.08f);
+        table->roughness = 0.7f; // wood
         m_props.push_back(std::move(table));
 
         // Pedestals for books
@@ -202,6 +208,7 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
             p->mesh = Mesh::createCube(1.0f);
             p->transform = glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(x, 0.4f, z)), glm::vec3(0.4f, 0.8f, 0.4f));
             p->materialColor = glm::vec3(0.2f, 0.15f, 0.1f);
+            p->roughness = 0.7f; // wood
             m_props.push_back(std::move(p));
         };
         addPedestal(-5.0f, -4.0f);
@@ -220,6 +227,7 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
             t = glm::scale(t, glm::vec3(w, h, 0.05f));
             f->transform = t;
             f->materialColor = glm::vec3(0.35f, 0.25f, 0.15f);
+            f->roughness = 0.6f; // varnished wood frame
             // Generate procedural artwork texture
             GLuint artTex = generateProceduralArt(frameSeed++, 256, 256);
             f->texture = Texture(); // default constructed
@@ -251,6 +259,7 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
             t = glm::scale(t, glm::vec3(0.03f, 0.03f, len));
             r->transform = t;
             r->materialColor = glm::vec3(0.5f, 0.1f, 0.1f);
+            r->roughness = 0.8f; // rope/fabric
             m_props.push_back(std::move(r));
         };
         addRope(-5.0f, -4.0f, 5.0f, -4.0f, 0.85f);
@@ -301,8 +310,9 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
 
         m_player.setWorldBounds(-6.0f, 6.0f, -13.0f, 15.0f);
 
+        // Exponential fog: uFogStart=density, uFogEnd=max distance
         renderer.getPostProcess().setFogParams(
-            glm::vec3(0.02f, 0.02f, 0.04f), 15.0f, 40.0f, 0.1f, 100.0f);
+            glm::vec3(0.02f, 0.02f, 0.04f), 4.0f, 40.0f, 0.1f, 100.0f);
     }
     else if (m_currentRoom.name == "Artist Studio") {
         // === Third room: intimate artist workspace ===
@@ -312,6 +322,7 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
         floor->mesh = Mesh::createPlane(8.0f, 8.0f);
         floor->transform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f));
         floor->materialColor = glm::vec3(0.12f, 0.08f, 0.06f); // dark wood floor
+        floor->roughness = 0.75f; // worn wood
         m_props.push_back(std::move(floor));
 
         // Walls (4 sides)
@@ -324,6 +335,7 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
             t = glm::scale(t, glm::vec3(w, 3.0f, 0.1f));
             wall->transform = t;
             wall->materialColor = glm::vec3(0.08f, 0.06f, 0.05f);
+            wall->roughness = 0.85f; // rough plaster walls
             m_props.push_back(std::move(wall));
         };
         addWall(0.0f, -4.0f, 0.0f, 8.0f);   // back wall
@@ -336,6 +348,7 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
         desk->mesh = Mesh::createCube(1.0f);
         desk->transform = glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.4f, -2.0f)), glm::vec3(1.8f, 0.05f, 0.8f));
         desk->materialColor = glm::vec3(0.25f, 0.15f, 0.08f);
+        desk->roughness = 0.7f; // wood
         m_props.push_back(std::move(desk));
 
         // Desk legs
@@ -346,6 +359,7 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
                 leg->transform = glm::scale(glm::translate(glm::mat4(1.0f),
                     glm::vec3(dx, 0.2f, -2.0f + dz)), glm::vec3(0.05f, 0.4f, 0.05f));
                 leg->materialColor = glm::vec3(0.2f, 0.12f, 0.06f);
+                leg->roughness = 0.7f; // wood
                 m_props.push_back(std::move(leg));
             }
         }
@@ -355,6 +369,7 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
         chair->mesh = Mesh::createCube(1.0f);
         chair->transform = glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.25f, -1.0f)), glm::vec3(0.4f, 0.05f, 0.4f));
         chair->materialColor = glm::vec3(0.3f, 0.18f, 0.1f);
+        chair->roughness = 0.7f; // wood
         m_props.push_back(std::move(chair));
 
         // Ink bottles on desk (small cubes)
@@ -364,6 +379,7 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
             ink->transform = glm::scale(glm::translate(glm::mat4(1.0f),
                 glm::vec3(dx, 0.47f, -2.2f)), glm::vec3(0.04f, 0.06f, 0.04f));
             ink->materialColor = glm::vec3(0.05f, 0.05f, 0.1f); // dark ink
+            ink->roughness = 0.15f; // glossy glass bottles
             m_props.push_back(std::move(ink));
         }
 
@@ -372,6 +388,7 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
         shelf->mesh = Mesh::createCube(1.0f);
         shelf->transform = glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(-2.0f, 1.5f, -3.9f)), glm::vec3(1.5f, 0.04f, 0.3f));
         shelf->materialColor = glm::vec3(0.2f, 0.13f, 0.07f);
+        shelf->roughness = 0.7f; // wood
         m_props.push_back(std::move(shelf));
 
         // Small artwork on back wall
@@ -403,6 +420,7 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
         candle->mesh = Mesh::createCube(1.0f);
         candle->transform = glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(0.6f, 0.48f, -2.0f)), glm::vec3(0.03f, 0.1f, 0.03f));
         candle->materialColor = glm::vec3(0.9f, 0.85f, 0.7f); // white-ish wax
+        candle->roughness = 0.3f; // waxy surface
         m_props.push_back(std::move(candle));
 
         m_pointLights.push_back({{0.6f, 0.6f, -2.0f}, {1.0f, 0.8f, 0.4f}, 6.0f, 6.0f, true});
@@ -439,8 +457,9 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
         m_player.setWorldBounds(-3.5f, 3.5f, -3.5f, 3.5f);
 
         // Intimate fog — close, warm
+        // Exponential fog: uFogStart=density, uFogEnd=max distance
         renderer.getPostProcess().setFogParams(
-            glm::vec3(0.03f, 0.025f, 0.02f), 5.0f, 15.0f, 0.1f, 100.0f);
+            glm::vec3(0.03f, 0.025f, 0.02f), 6.0f, 15.0f, 0.1f, 100.0f);
     }
 
     // Copy point lights from room def (if any were in JSON)
@@ -654,7 +673,7 @@ void Scene::renderObjects() {
     m_meshShader.setVec3("uLightColor", m_currentRoom.lightColor.x, m_currentRoom.lightColor.y, m_currentRoom.lightColor.z);
 
     // Point lights
-    int numLights = std::min(static_cast<int>(m_pointLights.size()), 4);
+    int numLights = std::min(static_cast<int>(m_pointLights.size()), 8);
     m_meshShader.setInt("uNumPointLights", numLights);
     for (int i = 0; i < numLights; i++) {
         std::string prefix = "uPointLightPos[" + std::to_string(i) + "]";
@@ -674,6 +693,8 @@ void Scene::renderObjects() {
         // Highlight for book-linked props
         float highlight = (prop->bookIndex >= 0 && prop->bookIndex == m_nearBookIndex) ? m_highlightAmount : 0.0f;
         m_meshShader.setFloat("uHighlight", highlight);
+
+        m_meshShader.setFloat("uRoughness", prop->roughness);
 
         if (prop->model) {
             glDisable(GL_CULL_FACE);
