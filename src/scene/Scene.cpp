@@ -262,7 +262,21 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
         m_pointLights.push_back({{-8.0f, 6.0f, -8.0f}, {0.8f, 0.5f, 0.2f}, 20.0f, true});
         m_pointLights.push_back({{8.0f, 6.0f, -8.0f}, {0.8f, 0.5f, 0.2f}, 20.0f, true});
 
-        // Triggers disabled — testing hallway only
+        // Trigger to Forest Clearing (positive-Z end of hallway)
+        TriggerZone toForest;
+        toForest.position = glm::vec3(0.0f, 0.0f, 14.0f);
+        toForest.radius = 1.5f;
+        toForest.targetRoom = "assets/rooms/test_room.json";
+        toForest.spawnPos = glm::vec3(0.0f, 0.0f, -3.0f);
+        m_triggers.push_back(toForest);
+
+        // Trigger to Artist Studio (negative-Z end of hallway)
+        TriggerZone toStudio;
+        toStudio.position = glm::vec3(0.0f, 0.0f, -12.0f);
+        toStudio.radius = 1.5f;
+        toStudio.targetRoom = "assets/rooms/studio.json";
+        toStudio.spawnPos = glm::vec3(0.0f, 0.0f, 2.0f);
+        m_triggers.push_back(toStudio);
 
         // Books
         {
