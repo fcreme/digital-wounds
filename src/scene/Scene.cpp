@@ -82,15 +82,29 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
         renderer.getBackgroundLayer().loadTexture(m_currentRoom.backgroundPath);
     }
 
-    // Load props (any format via Assimp)
+    // Load props from room definition (handles model files, cubes, and planes)
     for (const auto& propDef : m_currentRoom.props) {
         auto prop = std::make_unique<PropInstance>();
 
-        if (!propDef.modelPath.empty()) {
+        if (propDef.meshType == "cube") {
+            prop->mesh = Mesh::createCube(propDef.meshSize.x);
+        } else if (propDef.meshType == "plane") {
+            prop->mesh = Mesh::createPlane(propDef.meshSize.x, propDef.meshSize.y);
+        } else if (!propDef.modelPath.empty()) {
             prop->model = std::make_unique<Model>();
-            prop->model->load(propDef.modelPath);
+            if (!prop->model->load(propDef.modelPath)) {
+                std::cerr << "Scene: failed to load model: " << propDef.modelPath << "\n";
+                continue;
+            }
         }
+
         if (!propDef.texturePath.empty()) prop->texture.load(propDef.texturePath);
+
+        // Procedural art texture
+        if (propDef.proceduralArtSeed >= 0) {
+            GLuint artTex = generateProceduralArt(propDef.proceduralArtSeed, 256, 256);
+            prop->texture.setID(artTex);
+        }
 
         glm::mat4 t(1.0f);
         t = glm::translate(t, propDef.position);
@@ -99,382 +113,49 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
         t = glm::rotate(t, glm::radians(propDef.rotation.z), glm::vec3(0, 0, 1));
         t = glm::scale(t, propDef.scale);
         prop->transform = t;
+
+        prop->materialColor = propDef.color;
+        prop->roughness = propDef.roughness;
+        prop->emissive = propDef.emissive;
+        prop->rotationSpeed = propDef.rotationSpeed;
+        prop->bookIndex = propDef.bookIndex;
+
         m_props.push_back(std::move(prop));
     }
 
-    // === Room-specific procedural content ===
-    if (m_currentRoom.name == "Forest Clearing") {
-        // Stone pillars (dark gray)
-        auto addPillar = [&](float x, float z) {
-            auto p = std::make_unique<PropInstance>();
-            p->mesh = Mesh::createCube(1.0f);
-            p->transform = glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(x, 0.75f, z)), glm::vec3(0.5f, 1.5f, 0.5f));
-            p->materialColor = glm::vec3(0.25f, 0.23f, 0.22f);
-            p->roughness = 0.9f; // rough stone
-            m_props.push_back(std::move(p));
-        };
-        addPillar(-2.0f, -1.0f);
-        addPillar(2.0f, -1.0f);
-
-        // Floating book (animated)
-        auto book = std::make_unique<PropInstance>();
-        book->mesh = Mesh::createCube(1.0f);
-        book->transform = glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 1.2f, -2.0f)), glm::vec3(0.6f, 0.05f, 0.4f));
-        book->rotationSpeed = 0.8f;
-        book->materialColor = glm::vec3(0.4f, 0.2f, 0.1f); // leather brown
-        book->roughness = 0.5f; // semi-smooth leather
-        m_props.push_back(std::move(book));
-
-        // Ground plane
-        auto ground = std::make_unique<PropInstance>();
-        ground->mesh = Mesh::createPlane(12.0f, 12.0f);
-        ground->transform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f));
-        ground->materialColor = glm::vec3(0.08f, 0.1f, 0.06f); // dark earth
-        ground->roughness = 0.85f; // rough earth
-        m_props.push_back(std::move(ground));
-
-        // Point lights (lanterns near pillars)
-        m_pointLights.push_back({{-2.0f, 2.0f, -1.0f}, {0.9f, 0.6f, 0.2f}, 6.0f, 6.0f, true});
-        m_pointLights.push_back({{2.0f, 2.0f, -1.0f}, {0.9f, 0.6f, 0.2f}, 6.0f, 6.0f, true});
-
-        // Trigger
-        TriggerZone door;
-        door.position = glm::vec3(0.0f, 0.0f, -4.0f);
-        door.radius = 1.5f;
-        door.targetRoom = "assets/rooms/hallway.json";
-        door.spawnPos = glm::vec3(0.0f, 0.0f, 3.0f);
-        m_triggers.push_back(door);
-
-        // Interactive book at the floating book position
-        {
-            auto b = std::make_unique<Book>();
-            b->init(glm::vec3(0.0f, 1.2f, -2.0f), 2.5f);
-            b->addPage("assets/textures/book_page1.png");
-            b->addPage("assets/textures/book_page2.png");
-            b->addPage("assets/textures/book_page3.png");
-            m_books.push_back(std::move(b));
-        }
-
-        // Fog params for outdoor forest (lighter, farther)
-        // Exponential fog: uFogStart=density, uFogEnd=max distance
-        renderer.getPostProcess().setFogParams(
-            glm::vec3(0.03f, 0.04f, 0.05f), 3.0f, 50.0f, 0.1f, 100.0f);
-    }
-    else if (m_currentRoom.name == "Dark Hallway") {
-        // Picture Gallery GLB model — scaled up so player is inside the room
-        {
-            auto prop = std::make_unique<PropInstance>();
-            prop->model = std::make_unique<Model>();
-            if (prop->model->load("props/the_picture_gallery_low_poly__vr.glb")) {
-                glm::mat4 t(1.0f);
-                t = glm::translate(t, glm::vec3(0.0f, 0.0f, 0.0f));
-                t = glm::scale(t, glm::vec3(10.0f));
-                prop->transform = t;
-                m_props.push_back(std::move(prop));
-            }
-        }
-
-        // Lantern positions (used for props, lights, and fire particles)
-        struct LanternPos { float x, y, z; };
-        LanternPos lanterns[] = {
-            {-8.0f, 5.0f, 4.0f}, {8.0f, 5.0f, 4.0f},
-            {-8.0f, 5.0f, -8.0f}, {8.0f, 5.0f, -8.0f},
-            {0.0f, 5.0f, -14.0f}, {0.0f, 5.0f, 10.0f}
-        };
-
-        for (const auto& lp : lanterns) {
-            // Bronze lantern cube
-            auto l = std::make_unique<PropInstance>();
-            l->mesh = Mesh::createCube(1.0f);
-            l->transform = glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(lp.x, lp.y, lp.z)), glm::vec3(0.3f, 0.5f, 0.3f));
-            l->materialColor = glm::vec3(0.6f, 0.4f, 0.1f);
-            l->roughness = 0.2f; // polished bronze
-            l->emissive = glm::vec3(0.3f, 0.2f, 0.05f); // subtle warm self-illumination
-            m_props.push_back(std::move(l));
-        }
-
-        // Table
-        auto table = std::make_unique<PropInstance>();
-        table->mesh = Mesh::createCube(1.0f);
-        table->transform = glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.5f, 0.0f)), glm::vec3(1.5f, 0.06f, 0.8f));
-        table->materialColor = glm::vec3(0.3f, 0.18f, 0.08f);
-        table->roughness = 0.7f; // wood
-        m_props.push_back(std::move(table));
-
-        // Pedestals for books
-        auto addPedestal = [&](float x, float z) {
-            auto p = std::make_unique<PropInstance>();
-            p->mesh = Mesh::createCube(1.0f);
-            p->transform = glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(x, 0.4f, z)), glm::vec3(0.4f, 0.8f, 0.4f));
-            p->materialColor = glm::vec3(0.2f, 0.15f, 0.1f);
-            p->roughness = 0.7f; // wood
-            m_props.push_back(std::move(p));
-        };
-        addPedestal(-5.0f, -4.0f);
-        addPedestal(5.0f, -4.0f);
-        addPedestal(-5.0f, 8.0f);
-        addPedestal(5.0f, 8.0f);
-
-        // Picture frames with procedural art textures
-        int frameSeed = 100;
-        auto addFrame = [&](float x, float y, float z, float ry, float w, float h) {
-            auto f = std::make_unique<PropInstance>();
-            f->mesh = Mesh::createCube(1.0f);
-            glm::mat4 t(1.0f);
-            t = glm::translate(t, glm::vec3(x, y, z));
-            t = glm::rotate(t, glm::radians(ry), glm::vec3(0, 1, 0));
-            t = glm::scale(t, glm::vec3(w, h, 0.05f));
-            f->transform = t;
-            f->materialColor = glm::vec3(0.35f, 0.25f, 0.15f);
-            f->roughness = 0.6f; // varnished wood frame
-            // Generate procedural artwork texture
-            GLuint artTex = generateProceduralArt(frameSeed++, 256, 256);
-            f->texture = Texture(); // default constructed
-            f->texture.setID(artTex); // inject generated texture
-            m_props.push_back(std::move(f));
-        };
-        // Left wall
-        addFrame(-9.5f, 3.5f, -2.0f, 90.0f, 2.0f, 1.5f);
-        addFrame(-9.5f, 3.5f, 6.0f, 90.0f, 1.8f, 2.0f);
-        // Right wall
-        addFrame(9.5f, 3.5f, -2.0f, -90.0f, 2.0f, 1.5f);
-        addFrame(9.5f, 3.5f, 6.0f, -90.0f, 1.8f, 2.0f);
-        // Back wall
-        addFrame(-3.0f, 4.0f, -15.5f, 0.0f, 2.5f, 1.8f);
-        addFrame(3.0f, 4.0f, -15.5f, 0.0f, 2.0f, 2.5f);
-
-        // Rope barriers
-        auto addRope = [&](float x1, float z1, float x2, float z2, float y) {
-            float cx = (x1 + x2) * 0.5f;
-            float cz = (z1 + z2) * 0.5f;
-            float dx = x2 - x1, dz = z2 - z1;
-            float len = std::sqrt(dx * dx + dz * dz);
-            float angle = std::atan2(dx, dz);
-            auto r = std::make_unique<PropInstance>();
-            r->mesh = Mesh::createCube(1.0f);
-            glm::mat4 t(1.0f);
-            t = glm::translate(t, glm::vec3(cx, y, cz));
-            t = glm::rotate(t, angle, glm::vec3(0, 1, 0));
-            t = glm::scale(t, glm::vec3(0.03f, 0.03f, len));
-            r->transform = t;
-            r->materialColor = glm::vec3(0.5f, 0.1f, 0.1f);
-            r->roughness = 0.8f; // rope/fabric
-            m_props.push_back(std::move(r));
-        };
-        addRope(-5.0f, -4.0f, 5.0f, -4.0f, 0.85f);
-        addRope(-5.0f, 8.0f, 5.0f, 8.0f, 0.85f);
-
-        // Warm lantern lights
-        m_pointLights.push_back({{-8.0f, 6.0f, 4.0f}, {1.0f, 0.7f, 0.3f}, 25.0f, 25.0f, true});
-        m_pointLights.push_back({{8.0f, 6.0f, 4.0f}, {1.0f, 0.7f, 0.3f}, 25.0f, 25.0f, true});
-        m_pointLights.push_back({{-8.0f, 6.0f, -8.0f}, {0.8f, 0.5f, 0.2f}, 20.0f, 20.0f, true});
-        m_pointLights.push_back({{8.0f, 6.0f, -8.0f}, {0.8f, 0.5f, 0.2f}, 20.0f, 20.0f, true});
-
-        // Trigger to Forest Clearing (positive-Z end of hallway)
-        TriggerZone toForest;
-        toForest.position = glm::vec3(0.0f, 0.0f, 14.0f);
-        toForest.radius = 1.5f;
-        toForest.targetRoom = "assets/rooms/test_room.json";
-        toForest.spawnPos = glm::vec3(0.0f, 0.0f, -3.0f);
-        m_triggers.push_back(toForest);
-
-        // Trigger to Artist Studio (negative-Z end of hallway)
-        TriggerZone toStudio;
-        toStudio.position = glm::vec3(0.0f, 0.0f, -12.0f);
-        toStudio.radius = 1.5f;
-        toStudio.targetRoom = "assets/rooms/studio.json";
-        toStudio.spawnPos = glm::vec3(0.0f, 0.0f, 2.0f);
-        m_triggers.push_back(toStudio);
-
-        // Books
-        {
-            auto b = std::make_unique<Book>();
-            b->init(glm::vec3(0.0f, 0.6f, 0.0f), 3.0f);
-            b->addPage("assets/textures/book_page1.png");
-            b->addPage("assets/textures/book_page2.png");
-            m_books.push_back(std::move(b));
-        }
-        {
-            auto b = std::make_unique<Book>();
-            b->init(glm::vec3(-5.0f, 0.9f, -4.0f), 3.0f);
-            b->addPage("assets/textures/book_page1.png");
-            m_books.push_back(std::move(b));
-        }
-        {
-            auto b = std::make_unique<Book>();
-            b->init(glm::vec3(5.0f, 0.9f, -4.0f), 3.0f);
-            b->addPage("assets/textures/book_page2.png");
-            m_books.push_back(std::move(b));
-        }
-        {
-            auto b = std::make_unique<Book>();
-            b->init(glm::vec3(-5.0f, 0.9f, 8.0f), 3.0f);
-            b->addPage("assets/textures/book_page3.png");
-            m_books.push_back(std::move(b));
-        }
-        {
-            auto b = std::make_unique<Book>();
-            b->init(glm::vec3(5.0f, 0.9f, 8.0f), 3.0f);
-            b->addPage("assets/textures/book_page1.png");
-            b->addPage("assets/textures/book_page2.png");
-            b->addPage("assets/textures/book_page3.png");
-            m_books.push_back(std::move(b));
-        }
-
-        // Exponential fog: uFogStart=density, uFogEnd=max distance
-        renderer.getPostProcess().setFogParams(
-            glm::vec3(0.02f, 0.02f, 0.04f), 4.0f, 40.0f, 0.1f, 100.0f);
-    }
-    else if (m_currentRoom.name == "Artist Studio") {
-        // === Third room: intimate artist workspace ===
-
-        // Floor
-        auto floor = std::make_unique<PropInstance>();
-        floor->mesh = Mesh::createPlane(8.0f, 8.0f);
-        floor->transform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f));
-        floor->materialColor = glm::vec3(0.12f, 0.08f, 0.06f); // dark wood floor
-        floor->roughness = 0.75f; // worn wood
-        m_props.push_back(std::move(floor));
-
-        // Walls (4 sides)
-        auto addWall = [&](float x, float z, float ry, float w) {
-            auto wall = std::make_unique<PropInstance>();
-            wall->mesh = Mesh::createCube(1.0f);
-            glm::mat4 t(1.0f);
-            t = glm::translate(t, glm::vec3(x, 1.5f, z));
-            t = glm::rotate(t, glm::radians(ry), glm::vec3(0, 1, 0));
-            t = glm::scale(t, glm::vec3(w, 3.0f, 0.1f));
-            wall->transform = t;
-            wall->materialColor = glm::vec3(0.08f, 0.06f, 0.05f);
-            wall->roughness = 0.85f; // rough plaster walls
-            m_props.push_back(std::move(wall));
-        };
-        addWall(0.0f, -4.0f, 0.0f, 8.0f);   // back wall
-        addWall(0.0f, 4.0f, 0.0f, 8.0f);     // front wall
-        addWall(-4.0f, 0.0f, 90.0f, 8.0f);   // left wall
-        addWall(4.0f, 0.0f, 90.0f, 8.0f);    // right wall
-
-        // Desk
-        auto desk = std::make_unique<PropInstance>();
-        desk->mesh = Mesh::createCube(1.0f);
-        desk->transform = glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.4f, -2.0f)), glm::vec3(1.8f, 0.05f, 0.8f));
-        desk->materialColor = glm::vec3(0.25f, 0.15f, 0.08f);
-        desk->roughness = 0.7f; // wood
-        m_props.push_back(std::move(desk));
-
-        // Desk legs
-        for (float dx : {-0.8f, 0.8f}) {
-            for (float dz : {-0.35f, 0.35f}) {
-                auto leg = std::make_unique<PropInstance>();
-                leg->mesh = Mesh::createCube(1.0f);
-                leg->transform = glm::scale(glm::translate(glm::mat4(1.0f),
-                    glm::vec3(dx, 0.2f, -2.0f + dz)), glm::vec3(0.05f, 0.4f, 0.05f));
-                leg->materialColor = glm::vec3(0.2f, 0.12f, 0.06f);
-                leg->roughness = 0.7f; // wood
-                m_props.push_back(std::move(leg));
-            }
-        }
-
-        // Chair
-        auto chair = std::make_unique<PropInstance>();
-        chair->mesh = Mesh::createCube(1.0f);
-        chair->transform = glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.25f, -1.0f)), glm::vec3(0.4f, 0.05f, 0.4f));
-        chair->materialColor = glm::vec3(0.3f, 0.18f, 0.1f);
-        chair->roughness = 0.7f; // wood
-        m_props.push_back(std::move(chair));
-
-        // Ink bottles on desk (small cubes)
-        for (float dx : {-0.5f, -0.2f, 0.3f}) {
-            auto ink = std::make_unique<PropInstance>();
-            ink->mesh = Mesh::createCube(1.0f);
-            ink->transform = glm::scale(glm::translate(glm::mat4(1.0f),
-                glm::vec3(dx, 0.47f, -2.2f)), glm::vec3(0.04f, 0.06f, 0.04f));
-            ink->materialColor = glm::vec3(0.05f, 0.05f, 0.1f); // dark ink
-            ink->roughness = 0.15f; // glossy glass bottles
-            m_props.push_back(std::move(ink));
-        }
-
-        // Shelf on back wall
-        auto shelf = std::make_unique<PropInstance>();
-        shelf->mesh = Mesh::createCube(1.0f);
-        shelf->transform = glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(-2.0f, 1.5f, -3.9f)), glm::vec3(1.5f, 0.04f, 0.3f));
-        shelf->materialColor = glm::vec3(0.2f, 0.13f, 0.07f);
-        shelf->roughness = 0.7f; // wood
-        m_props.push_back(std::move(shelf));
-
-        // Small artwork on back wall
-        {
-            auto art = std::make_unique<PropInstance>();
-            art->mesh = Mesh::createCube(1.0f);
-            glm::mat4 t(1.0f);
-            t = glm::translate(t, glm::vec3(2.0f, 2.0f, -3.9f));
-            t = glm::scale(t, glm::vec3(1.2f, 1.0f, 0.03f));
-            art->transform = t;
-            GLuint artTex = generateProceduralArt(200, 256, 256);
-            art->texture.setID(artTex);
-            m_props.push_back(std::move(art));
-        }
-        {
-            auto art = std::make_unique<PropInstance>();
-            art->mesh = Mesh::createCube(1.0f);
-            glm::mat4 t(1.0f);
-            t = glm::translate(t, glm::vec3(-1.5f, 2.2f, -3.9f));
-            t = glm::scale(t, glm::vec3(0.8f, 0.6f, 0.03f));
-            art->transform = t;
-            GLuint artTex = generateProceduralArt(201, 256, 256);
-            art->texture.setID(artTex);
-            m_props.push_back(std::move(art));
-        }
-
-        // Candle on desk (tiny cube + fire + point light)
-        auto candle = std::make_unique<PropInstance>();
-        candle->mesh = Mesh::createCube(1.0f);
-        candle->transform = glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(0.6f, 0.48f, -2.0f)), glm::vec3(0.03f, 0.1f, 0.03f));
-        candle->materialColor = glm::vec3(0.9f, 0.85f, 0.7f); // white-ish wax
-        candle->roughness = 0.3f; // waxy surface
-        candle->emissive = glm::vec3(1.5f, 1.1f, 0.5f); // warm glow, >1.0 triggers bloom
-        m_props.push_back(std::move(candle));
-
-        m_pointLights.push_back({{0.6f, 0.6f, -2.0f}, {1.0f, 0.8f, 0.4f}, 6.0f, 6.0f, true});
-
-        // Ceiling light (dim, overhead)
-        m_pointLights.push_back({{0.0f, 2.8f, 0.0f}, {0.4f, 0.35f, 0.3f}, 8.0f, false});
-
-        // Trigger back to gallery
-        TriggerZone back;
-        back.position = glm::vec3(0.0f, 0.0f, 3.8f);
-        back.radius = 1.5f;
-        back.targetRoom = "assets/rooms/hallway.json";
-        back.spawnPos = glm::vec3(0.0f, 0.0f, -14.0f);
-        m_triggers.push_back(back);
-
-        // Main portfolio book on desk
-        {
-            auto b = std::make_unique<Book>();
-            b->init(glm::vec3(0.0f, 0.5f, -2.0f), 2.0f);
-            b->addPage("assets/textures/book_page1.png");
-            b->addPage("assets/textures/book_page2.png");
-            b->addPage("assets/textures/book_page3.png");
-            m_books.push_back(std::move(b));
-        }
-
-        // Book on shelf
-        {
-            auto b = std::make_unique<Book>();
-            b->init(glm::vec3(-2.0f, 1.55f, -3.8f), 1.5f);
-            b->addPage("assets/textures/book_page1.png");
-            m_books.push_back(std::move(b));
-        }
-
-        // Intimate fog — close, warm
-        // Exponential fog: uFogStart=density, uFogEnd=max distance
-        renderer.getPostProcess().setFogParams(
-            glm::vec3(0.03f, 0.025f, 0.02f), 6.0f, 15.0f, 0.1f, 100.0f);
-    }
-
-    // Copy point lights from room def (if any were in JSON)
+    // Load point lights from room definition
     for (const auto& pl : m_currentRoom.pointLights) {
         m_pointLights.push_back(pl);
+    }
+
+    // Load trigger zones from room definition
+    for (const auto& td : m_currentRoom.triggers) {
+        TriggerZone tz;
+        tz.position = td.position;
+        tz.radius = td.radius;
+        tz.targetRoom = td.targetRoom;
+        tz.spawnPos = td.spawnPos;
+        m_triggers.push_back(tz);
+    }
+
+    // Load books from room definition
+    for (const auto& bd : m_currentRoom.books) {
+        auto b = std::make_unique<Book>();
+        b->init(bd.position, bd.interactRadius);
+        for (const auto& page : bd.pages) {
+            b->addPage(page);
+        }
+        m_books.push_back(std::move(b));
+    }
+
+    // Set fog params from room definition
+    if (m_currentRoom.fogParams.defined) {
+        renderer.getPostProcess().setFogParams(
+            m_currentRoom.fogParams.color,
+            m_currentRoom.fogParams.density,
+            m_currentRoom.fogParams.maxDistance,
+            m_currentRoom.fogParams.near,
+            m_currentRoom.fogParams.far);
     }
 
     // Spawn particle emitters from room JSON

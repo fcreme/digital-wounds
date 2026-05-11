@@ -14,6 +14,38 @@ struct RoomPropDef {
     glm::vec3 rotation{0.0f};  // euler degrees
     glm::vec3 scale{1.0f};
     bool interactive = false;
+
+    // Extended fields for procedural meshes and materials
+    std::string meshType;          // "cube", "plane", or "" for model file
+    glm::vec2 meshSize{1.0f};     // cube size or plane width/depth
+    glm::vec3 color{0.5f, 0.5f, 0.5f};
+    float roughness = 0.7f;
+    glm::vec3 emissive{0.0f};
+    float rotationSpeed = 0.0f;    // Y-axis rotation (rad/s)
+    int proceduralArtSeed = -1;    // >=0 triggers procedural texture
+    int bookIndex = -1;            // links prop to a book for highlight
+};
+
+struct TriggerZoneDef {
+    glm::vec3 position{0.0f};
+    float radius = 1.0f;
+    std::string targetRoom;
+    glm::vec3 spawnPos{0.0f};
+};
+
+struct BookDef {
+    glm::vec3 position{0.0f};
+    float interactRadius = 2.5f;
+    std::vector<std::string> pages;
+};
+
+struct FogParamsDef {
+    glm::vec3 color{0.02f, 0.02f, 0.04f};
+    float density = 4.0f;
+    float maxDistance = 40.0f;
+    float near = 0.1f;
+    float far = 100.0f;
+    bool defined = false;  // true when fog section exists in JSON
 };
 
 struct PointLightDef {
@@ -102,6 +134,15 @@ struct RoomDef {
 
     // FMV overlays (animated atmospheric effects on background)
     std::vector<FMVOverlayDef> fmvOverlays;
+
+    // Trigger zones for room transitions
+    std::vector<TriggerZoneDef> triggers;
+
+    // Interactive books
+    std::vector<BookDef> books;
+
+    // Fog parameters
+    FogParamsDef fogParams;
 };
 
 bool loadRoomDef(const std::string& path, RoomDef& out);

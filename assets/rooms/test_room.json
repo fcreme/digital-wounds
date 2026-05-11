@@ -26,7 +26,71 @@
     "ambient": [0.08, 0.08, 0.1],
     "light_direction": [-0.3, -0.8, -0.5],
     "light_color": [0.6, 0.55, 0.5],
-    "props": [],
+    "props": [
+        {
+            "mesh_type": "cube",
+            "mesh_size": [1.0, 1.0],
+            "position": [-2.0, 0.75, -1.0],
+            "rotation": [0.0, 0.0, 0.0],
+            "scale": [0.5, 1.5, 0.5],
+            "color": [0.25, 0.23, 0.22],
+            "roughness": 0.9
+        },
+        {
+            "mesh_type": "cube",
+            "mesh_size": [1.0, 1.0],
+            "position": [2.0, 0.75, -1.0],
+            "rotation": [0.0, 0.0, 0.0],
+            "scale": [0.5, 1.5, 0.5],
+            "color": [0.25, 0.23, 0.22],
+            "roughness": 0.9
+        },
+        {
+            "mesh_type": "cube",
+            "mesh_size": [1.0, 1.0],
+            "position": [0.0, 1.2, -2.0],
+            "rotation": [0.0, 0.0, 0.0],
+            "scale": [0.6, 0.05, 0.4],
+            "color": [0.4, 0.2, 0.1],
+            "roughness": 0.5,
+            "rotation_speed": 0.8
+        },
+        {
+            "mesh_type": "plane",
+            "mesh_size": [12.0, 12.0],
+            "position": [0.0, 0.0, 0.0],
+            "rotation": [0.0, 0.0, 0.0],
+            "scale": [1.0, 1.0, 1.0],
+            "color": [0.08, 0.1, 0.06],
+            "roughness": 0.85
+        }
+    ],
+    "point_lights": [
+        { "position": [-2.0, 2.0, -1.0], "color": [0.9, 0.6, 0.2], "radius": 6.0, "flicker": true },
+        { "position": [2.0, 2.0, -1.0], "color": [0.9, 0.6, 0.2], "radius": 6.0, "flicker": true }
+    ],
+    "triggers": [
+        {
+            "position": [0.0, 0.0, -4.0],
+            "radius": 1.5,
+            "target_room": "assets/rooms/hallway.json",
+            "spawn_pos": [0.0, 0.0, 3.0]
+        }
+    ],
+    "books": [
+        {
+            "position": [0.0, 1.2, -2.0],
+            "interact_radius": 2.5,
+            "pages": ["assets/textures/book_page1.png", "assets/textures/book_page2.png", "assets/textures/book_page3.png"]
+        }
+    ],
+    "fog": {
+        "color": [0.03, 0.04, 0.05],
+        "density": 3.0,
+        "max_distance": 50.0,
+        "near": 0.1,
+        "far": 100.0
+    },
     "particles": [
         {
             "type": "fireflies",

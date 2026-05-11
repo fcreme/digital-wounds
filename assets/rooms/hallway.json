@@ -29,7 +29,251 @@
     "ambient": [0.12, 0.10, 0.14],
     "light_direction": [0.0, -0.95, -0.1],
     "light_color": [1.0, 0.8, 0.5],
-    "props": [],
+    "props": [
+        {
+            "model": "props/the_picture_gallery_low_poly__vr.glb",
+            "position": [0.0, 0.0, 0.0],
+            "rotation": [0.0, 0.0, 0.0],
+            "scale": [10.0, 10.0, 10.0]
+        },
+        {
+            "mesh_type": "cube",
+            "mesh_size": [1.0, 1.0],
+            "position": [-8.0, 5.0, 4.0],
+            "rotation": [0.0, 0.0, 0.0],
+            "scale": [0.3, 0.5, 0.3],
+            "color": [0.6, 0.4, 0.1],
+            "roughness": 0.2,
+            "emissive": [0.3, 0.2, 0.05]
+        },
+        {
+            "mesh_type": "cube",
+            "mesh_size": [1.0, 1.0],
+            "position": [8.0, 5.0, 4.0],
+            "rotation": [0.0, 0.0, 0.0],
+            "scale": [0.3, 0.5, 0.3],
+            "color": [0.6, 0.4, 0.1],
+            "roughness": 0.2,
+            "emissive": [0.3, 0.2, 0.05]
+        },
+        {
+            "mesh_type": "cube",
+            "mesh_size": [1.0, 1.0],
+            "position": [-8.0, 5.0, -8.0],
+            "rotation": [0.0, 0.0, 0.0],
+            "scale": [0.3, 0.5, 0.3],
+            "color": [0.6, 0.4, 0.1],
+            "roughness": 0.2,
+            "emissive": [0.3, 0.2, 0.05]
+        },
+        {
+            "mesh_type": "cube",
+            "mesh_size": [1.0, 1.0],
+            "position": [8.0, 5.0, -8.0],
+            "rotation": [0.0, 0.0, 0.0],
+            "scale": [0.3, 0.5, 0.3],
+            "color": [0.6, 0.4, 0.1],
+            "roughness": 0.2,
+            "emissive": [0.3, 0.2, 0.05]
+        },
+        {
+            "mesh_type": "cube",
+            "mesh_size": [1.0, 1.0],
+            "position": [0.0, 5.0, -14.0],
+            "rotation": [0.0, 0.0, 0.0],
+            "scale": [0.3, 0.5, 0.3],
+            "color": [0.6, 0.4, 0.1],
+            "roughness": 0.2,
+            "emissive": [0.3, 0.2, 0.05]
+        },
+        {
+            "mesh_type": "cube",
+            "mesh_size": [1.0, 1.0],
+            "position": [0.0, 5.0, 10.0],
+            "rotation": [0.0, 0.0, 0.0],
+            "scale": [0.3, 0.5, 0.3],
+            "color": [0.6, 0.4, 0.1],
+            "roughness": 0.2,
+            "emissive": [0.3, 0.2, 0.05]
+        },
+        {
+            "mesh_type": "cube",
+            "mesh_size": [1.0, 1.0],
+            "position": [0.0, 0.5, 0.0],
+            "rotation": [0.0, 0.0, 0.0],
+            "scale": [1.5, 0.06, 0.8],
+            "color": [0.3, 0.18, 0.08],
+            "roughness": 0.7
+        },
+        {
+            "mesh_type": "cube",
+            "mesh_size": [1.0, 1.0],
+            "position": [-5.0, 0.4, -4.0],
+            "rotation": [0.0, 0.0, 0.0],
+            "scale": [0.4, 0.8, 0.4],
+            "color": [0.2, 0.15, 0.1],
+            "roughness": 0.7
+        },
+        {
+            "mesh_type": "cube",
+            "mesh_size": [1.0, 1.0],
+            "position": [5.0, 0.4, -4.0],
+            "rotation": [0.0, 0.0, 0.0],
+            "scale": [0.4, 0.8, 0.4],
+            "color": [0.2, 0.15, 0.1],
+            "roughness": 0.7
+        },
+        {
+            "mesh_type": "cube",
+            "mesh_size": [1.0, 1.0],
+            "position": [-5.0, 0.4, 8.0],
+            "rotation": [0.0, 0.0, 0.0],
+            "scale": [0.4, 0.8, 0.4],
+            "color": [0.2, 0.15, 0.1],
+            "roughness": 0.7
+        },
+        {
+            "mesh_type": "cube",
+            "mesh_size": [1.0, 1.0],
+            "position": [5.0, 0.4, 8.0],
+            "rotation": [0.0, 0.0, 0.0],
+            "scale": [0.4, 0.8, 0.4],
+            "color": [0.2, 0.15, 0.1],
+            "roughness": 0.7
+        },
+        {
+            "mesh_type": "cube",
+            "mesh_size": [1.0, 1.0],
+            "position": [-9.5, 3.5, -2.0],
+            "rotation": [0.0, 90.0, 0.0],
+            "scale": [2.0, 1.5, 0.05],
+            "color": [0.35, 0.25, 0.15],
+            "roughness": 0.6,
+            "procedural_art_seed": 100
+        },
+        {
+            "mesh_type": "cube",
+            "mesh_size": [1.0, 1.0],
+            "position": [-9.5, 3.5, 6.0],
+            "rotation": [0.0, 90.0, 0.0],
+            "scale": [1.8, 2.0, 0.05],
+            "color": [0.35, 0.25, 0.15],
+            "roughness": 0.6,
+            "procedural_art_seed": 101
+        },
+        {
+            "mesh_type": "cube",
+            "mesh_size": [1.0, 1.0],
+            "position": [9.5, 3.5, -2.0],
+            "rotation": [0.0, -90.0, 0.0],
+            "scale": [2.0, 1.5, 0.05],
+            "color": [0.35, 0.25, 0.15],
+            "roughness": 0.6,
+            "procedural_art_seed": 102
+        },
+        {
+            "mesh_type": "cube",
+            "mesh_size": [1.0, 1.0],
+            "position": [9.5, 3.5, 6.0],
+            "rotation": [0.0, -90.0, 0.0],
+            "scale": [1.8, 2.0, 0.05],
+            "color": [0.35, 0.25, 0.15],
+            "roughness": 0.6,
+            "procedural_art_seed": 103
+        },
+        {
+            "mesh_type": "cube",
+            "mesh_size": [1.0, 1.0],
+            "position": [-3.0, 4.0, -15.5],
+            "rotation": [0.0, 0.0, 0.0],
+            "scale": [2.5, 1.8, 0.05],
+            "color": [0.35, 0.25, 0.15],
+            "roughness": 0.6,
+            "procedural_art_seed": 104
+        },
+        {
+            "mesh_type": "cube",
+            "mesh_size": [1.0, 1.0],
+            "position": [3.0, 4.0, -15.5],
+            "rotation": [0.0, 0.0, 0.0],
+            "scale": [2.0, 2.5, 0.05],
+            "color": [0.35, 0.25, 0.15],
+            "roughness": 0.6,
+            "procedural_art_seed": 105
+        },
+        {
+            "mesh_type": "cube",
+            "mesh_size": [1.0, 1.0],
+            "position": [0.0, 0.85, -4.0],
+            "rotation": [0.0, 90.0, 0.0],
+            "scale": [0.03, 0.03, 10.0],
+            "color": [0.5, 0.1, 0.1],
+            "roughness": 0.8
+        },
+        {
+            "mesh_type": "cube",
+            "mesh_size": [1.0, 1.0],
+            "position": [0.0, 0.85, 8.0],
+            "rotation": [0.0, 90.0, 0.0],
+            "scale": [0.03, 0.03, 10.0],
+            "color": [0.5, 0.1, 0.1],
+            "roughness": 0.8
+        }
+    ],
+    "point_lights": [
+        { "position": [-8.0, 6.0, 4.0], "color": [1.0, 0.7, 0.3], "radius": 25.0, "flicker": true },
+        { "position": [8.0, 6.0, 4.0], "color": [1.0, 0.7, 0.3], "radius": 25.0, "flicker": true },
+        { "position": [-8.0, 6.0, -8.0], "color": [0.8, 0.5, 0.2], "radius": 20.0, "flicker": true },
+        { "position": [8.0, 6.0, -8.0], "color": [0.8, 0.5, 0.2], "radius": 20.0, "flicker": true }
+    ],
+    "triggers": [
+        {
+            "position": [0.0, 0.0, 14.0],
+            "radius": 1.5,
+            "target_room": "assets/rooms/test_room.json",
+            "spawn_pos": [0.0, 0.0, -3.0]
+        },
+        {
+            "position": [0.0, 0.0, -12.0],
+            "radius": 1.5,
+            "target_room": "assets/rooms/studio.json",
+            "spawn_pos": [0.0, 0.0, 2.0]
+        }
+    ],
+    "books": [
+        {
+            "position": [0.0, 0.6, 0.0],
+            "interact_radius": 3.0,
+            "pages": ["assets/textures/book_page1.png", "assets/textures/book_page2.png"]
+        },
+        {
+            "position": [-5.0, 0.9, -4.0],
+            "interact_radius": 3.0,
+            "pages": ["assets/textures/book_page1.png"]
+        },
+        {
+            "position": [5.0, 0.9, -4.0],
+            "interact_radius": 3.0,
+            "pages": ["assets/textures/book_page2.png"]
+        },
+        {
+            "position": [-5.0, 0.9, 8.0],
+            "interact_radius": 3.0,
+            "pages": ["assets/textures/book_page3.png"]
+        },
+        {
+            "position": [5.0, 0.9, 8.0],
+            "interact_radius": 3.0,
+            "pages": ["assets/textures/book_page1.png", "assets/textures/book_page2.png", "assets/textures/book_page3.png"]
+        }
+    ],
+    "fog": {
+        "color": [0.02, 0.02, 0.04],
+        "density": 4.0,
+        "max_distance": 40.0,
+        "near": 0.1,
+        "far": 100.0
+    },
     "particles": [],
     "fmv_overlays": [
         {

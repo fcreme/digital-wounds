@@ -116,6 +116,14 @@ bool loadRoomDef(const std::string& path, RoomDef& out) {
             if (pr.contains("rotation")) pd.rotation = parseVec3(pr["rotation"]);
             if (pr.contains("scale")) pd.scale = parseVec3(pr["scale"]);
             pd.interactive = getOr<bool>(pr, "interactive", false);
+            pd.meshType = getOr<std::string>(pr, "mesh_type", "");
+            if (pr.contains("mesh_size")) pd.meshSize = parseVec2(pr["mesh_size"]);
+            if (pr.contains("color")) pd.color = parseVec3(pr["color"]);
+            pd.roughness = getOr<float>(pr, "roughness", 0.7f);
+            if (pr.contains("emissive")) pd.emissive = parseVec3(pr["emissive"]);
+            pd.rotationSpeed = getOr<float>(pr, "rotation_speed", 0.0f);
+            pd.proceduralArtSeed = getOr<int>(pr, "procedural_art_seed", -1);
+            pd.bookIndex = getOr<int>(pr, "book_index", -1);
             out.props.push_back(pd);
         }
     }
@@ -153,10 +161,50 @@ bool loadRoomDef(const std::string& path, RoomDef& out) {
         }
     }
 
+    // Trigger zones
+    if (j.contains("triggers")) {
+        for (const auto& tr : j["triggers"]) {
+            TriggerZoneDef td;
+            if (tr.contains("position")) td.position = parseVec3(tr["position"]);
+            td.radius = getOr<float>(tr, "radius", 1.0f);
+            td.targetRoom = getOr<std::string>(tr, "target_room", "");
+            if (tr.contains("spawn_pos")) td.spawnPos = parseVec3(tr["spawn_pos"]);
+            out.triggers.push_back(td);
+        }
+    }
+
+    // Books
+    if (j.contains("books")) {
+        for (const auto& bk : j["books"]) {
+            BookDef bd;
+            if (bk.contains("position")) bd.position = parseVec3(bk["position"]);
+            bd.interactRadius = getOr<float>(bk, "interact_radius", 2.5f);
+            if (bk.contains("pages")) {
+                for (const auto& page : bk["pages"]) {
+                    bd.pages.push_back(page.get<std::string>());
+                }
+            }
+            out.books.push_back(bd);
+        }
+    }
+
+    // Fog
+    if (j.contains("fog")) {
+        auto& fg = j["fog"];
+        out.fogParams.defined = true;
+        if (fg.contains("color")) out.fogParams.color = parseVec3(fg["color"]);
+        out.fogParams.density = getOr<float>(fg, "density", 4.0f);
+        out.fogParams.maxDistance = getOr<float>(fg, "max_distance", 40.0f);
+        out.fogParams.near = getOr<float>(fg, "near", 0.1f);
+        out.fogParams.far = getOr<float>(fg, "far", 100.0f);
+    }
+
     std::cout << "Room: loaded '" << out.name << "' from " << path
               << " (" << out.particles.size() << " particle emitters, "
               << out.fmvOverlays.size() << " FMV overlays, "
-              << out.collisionBoxes.size() << " collision boxes)\n";
+              << out.collisionBoxes.size() << " collision boxes, "
+              << out.triggers.size() << " triggers, "
+              << out.books.size() << " books)\n";
     return true;
 }
 
