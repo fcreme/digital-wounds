@@ -11,6 +11,12 @@ class InputManager;
 class Scene;
 class AudioManager;
 class UIOverlay;
+class TitleScreen;
+
+enum class GameState {
+    TitleScreen,
+    Playing
+};
 
 class Engine {
 public:
@@ -32,6 +38,8 @@ private:
     void processEvents();
     void update(float dt);
     void render();
+    void renderTitleScreen();
+    void startGame();
 
     SDL_Window* m_window = nullptr;
     SDL_GLContext m_glContext = nullptr;
@@ -41,6 +49,9 @@ private:
     std::unique_ptr<Scene> m_scene;
     std::unique_ptr<AudioManager> m_audio;
     std::unique_ptr<UIOverlay> m_ui;
+    std::unique_ptr<TitleScreen> m_titleScreen;
+
+    GameState m_gameState = GameState::TitleScreen;
 
     int m_windowWidth = 1280;
     int m_windowHeight = 720;

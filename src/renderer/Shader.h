@@ -2,6 +2,7 @@
 
 #include <glad/gl.h>
 #include <string>
+#include <unordered_map>
 
 namespace dw {
 
@@ -26,6 +27,7 @@ public:
     void setVec2(const std::string& name, float x, float y) const;
     void setVec3(const std::string& name, float x, float y, float z) const;
     void setVec4(const std::string& name, float x, float y, float z, float w) const;
+    void setMat3(const std::string& name, const float* value) const;
     void setMat4(const std::string& name, const float* value) const;
 
 private:
@@ -34,6 +36,7 @@ private:
     GLint getUniformLocation(const std::string& name) const;
 
     GLuint m_program = 0;
+    mutable std::unordered_map<std::string, GLint> m_uniformCache;
 };
 
 } // namespace dw

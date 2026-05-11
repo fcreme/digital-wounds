@@ -1,7 +1,7 @@
 # Digital Wounds — Project Instructions
 
 ## Project Overview
-Digital Wounds is a native C++ desktop application — a dark atmospheric experience showcasing tattoo artist portfolios. Built with a custom engine following the **Resident Evil Remake (2002) hybrid rendering architecture**: pre-rendered backgrounds + real-time 3D objects + dynamic lighting projected onto static backgrounds + FMV overlays for atmospheric effects.
+Digital Wounds is a native C++ desktop application — a dark atmospheric experience. Built with a custom engine following the **Resident Evil Remake (2002) hybrid rendering architecture**: pre-rendered backgrounds + real-time 3D objects + dynamic lighting projected onto static backgrounds + FMV overlays for atmospheric effects.
 
 ## Tech Stack
 - **Language:** C++17

@@ -110,6 +110,7 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
             p->mesh = Mesh::createCube(1.0f);
             p->transform = glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(x, 0.75f, z)), glm::vec3(0.5f, 1.5f, 0.5f));
             p->materialColor = glm::vec3(0.25f, 0.23f, 0.22f);
+            p->roughness = 0.9f; // rough stone
             m_props.push_back(std::move(p));
         };
         addPillar(-2.0f, -1.0f);
@@ -121,6 +122,7 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
         book->transform = glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 1.2f, -2.0f)), glm::vec3(0.6f, 0.05f, 0.4f));
         book->rotationSpeed = 0.8f;
         book->materialColor = glm::vec3(0.4f, 0.2f, 0.1f); // leather brown
+        book->roughness = 0.5f; // semi-smooth leather
         m_props.push_back(std::move(book));
 
         // Ground plane
@@ -128,11 +130,12 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
         ground->mesh = Mesh::createPlane(12.0f, 12.0f);
         ground->transform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f));
         ground->materialColor = glm::vec3(0.08f, 0.1f, 0.06f); // dark earth
+        ground->roughness = 0.85f; // rough earth
         m_props.push_back(std::move(ground));
 
         // Point lights (lanterns near pillars)
-        m_pointLights.push_back({{-2.0f, 2.0f, -1.0f}, {0.9f, 0.6f, 0.2f}, 6.0f, true});
-        m_pointLights.push_back({{2.0f, 2.0f, -1.0f}, {0.9f, 0.6f, 0.2f}, 6.0f, true});
+        m_pointLights.push_back({{-2.0f, 2.0f, -1.0f}, {0.9f, 0.6f, 0.2f}, 6.0f, 6.0f, true});
+        m_pointLights.push_back({{2.0f, 2.0f, -1.0f}, {0.9f, 0.6f, 0.2f}, 6.0f, 6.0f, true});
 
         // Trigger
         TriggerZone door;
@@ -152,11 +155,10 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
             m_books.push_back(std::move(b));
         }
 
-        m_player.setWorldBounds(-4.0f, 4.0f, -4.5f, 4.0f);
-
         // Fog params for outdoor forest (lighter, farther)
+        // Exponential fog: uFogStart=density, uFogEnd=max distance
         renderer.getPostProcess().setFogParams(
-            glm::vec3(0.03f, 0.04f, 0.05f), 20.0f, 50.0f, 0.1f, 100.0f);
+            glm::vec3(0.03f, 0.04f, 0.05f), 3.0f, 50.0f, 0.1f, 100.0f);
     }
     else if (m_currentRoom.name == "Dark Hallway") {
         // Picture Gallery GLB model — scaled up so player is inside the room
@@ -186,6 +188,8 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
             l->mesh = Mesh::createCube(1.0f);
             l->transform = glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(lp.x, lp.y, lp.z)), glm::vec3(0.3f, 0.5f, 0.3f));
             l->materialColor = glm::vec3(0.6f, 0.4f, 0.1f);
+            l->roughness = 0.2f; // polished bronze
+            l->emissive = glm::vec3(0.3f, 0.2f, 0.05f); // subtle warm self-illumination
             m_props.push_back(std::move(l));
         }
 
@@ -194,6 +198,7 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
         table->mesh = Mesh::createCube(1.0f);
         table->transform = glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.5f, 0.0f)), glm::vec3(1.5f, 0.06f, 0.8f));
         table->materialColor = glm::vec3(0.3f, 0.18f, 0.08f);
+        table->roughness = 0.7f; // wood
         m_props.push_back(std::move(table));
 
         // Pedestals for books
@@ -202,6 +207,7 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
             p->mesh = Mesh::createCube(1.0f);
             p->transform = glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(x, 0.4f, z)), glm::vec3(0.4f, 0.8f, 0.4f));
             p->materialColor = glm::vec3(0.2f, 0.15f, 0.1f);
+            p->roughness = 0.7f; // wood
             m_props.push_back(std::move(p));
         };
         addPedestal(-5.0f, -4.0f);
@@ -220,6 +226,7 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
             t = glm::scale(t, glm::vec3(w, h, 0.05f));
             f->transform = t;
             f->materialColor = glm::vec3(0.35f, 0.25f, 0.15f);
+            f->roughness = 0.6f; // varnished wood frame
             // Generate procedural artwork texture
             GLuint artTex = generateProceduralArt(frameSeed++, 256, 256);
             f->texture = Texture(); // default constructed
@@ -251,16 +258,17 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
             t = glm::scale(t, glm::vec3(0.03f, 0.03f, len));
             r->transform = t;
             r->materialColor = glm::vec3(0.5f, 0.1f, 0.1f);
+            r->roughness = 0.8f; // rope/fabric
             m_props.push_back(std::move(r));
         };
         addRope(-5.0f, -4.0f, 5.0f, -4.0f, 0.85f);
         addRope(-5.0f, 8.0f, 5.0f, 8.0f, 0.85f);
 
         // Warm lantern lights
-        m_pointLights.push_back({{-8.0f, 6.0f, 4.0f}, {1.0f, 0.7f, 0.3f}, 25.0f, true});
-        m_pointLights.push_back({{8.0f, 6.0f, 4.0f}, {1.0f, 0.7f, 0.3f}, 25.0f, true});
-        m_pointLights.push_back({{-8.0f, 6.0f, -8.0f}, {0.8f, 0.5f, 0.2f}, 20.0f, true});
-        m_pointLights.push_back({{8.0f, 6.0f, -8.0f}, {0.8f, 0.5f, 0.2f}, 20.0f, true});
+        m_pointLights.push_back({{-8.0f, 6.0f, 4.0f}, {1.0f, 0.7f, 0.3f}, 25.0f, 25.0f, true});
+        m_pointLights.push_back({{8.0f, 6.0f, 4.0f}, {1.0f, 0.7f, 0.3f}, 25.0f, 25.0f, true});
+        m_pointLights.push_back({{-8.0f, 6.0f, -8.0f}, {0.8f, 0.5f, 0.2f}, 20.0f, 20.0f, true});
+        m_pointLights.push_back({{8.0f, 6.0f, -8.0f}, {0.8f, 0.5f, 0.2f}, 20.0f, 20.0f, true});
 
         // Trigger to Forest Clearing (positive-Z end of hallway)
         TriggerZone toForest;
@@ -313,10 +321,9 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
             m_books.push_back(std::move(b));
         }
 
-        m_player.setWorldBounds(-6.0f, 6.0f, -13.0f, 15.0f);
-
+        // Exponential fog: uFogStart=density, uFogEnd=max distance
         renderer.getPostProcess().setFogParams(
-            glm::vec3(0.02f, 0.02f, 0.04f), 15.0f, 40.0f, 0.1f, 100.0f);
+            glm::vec3(0.02f, 0.02f, 0.04f), 4.0f, 40.0f, 0.1f, 100.0f);
     }
     else if (m_currentRoom.name == "Artist Studio") {
         // === Third room: intimate artist workspace ===
@@ -326,6 +333,7 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
         floor->mesh = Mesh::createPlane(8.0f, 8.0f);
         floor->transform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f));
         floor->materialColor = glm::vec3(0.12f, 0.08f, 0.06f); // dark wood floor
+        floor->roughness = 0.75f; // worn wood
         m_props.push_back(std::move(floor));
 
         // Walls (4 sides)
@@ -338,6 +346,7 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
             t = glm::scale(t, glm::vec3(w, 3.0f, 0.1f));
             wall->transform = t;
             wall->materialColor = glm::vec3(0.08f, 0.06f, 0.05f);
+            wall->roughness = 0.85f; // rough plaster walls
             m_props.push_back(std::move(wall));
         };
         addWall(0.0f, -4.0f, 0.0f, 8.0f);   // back wall
@@ -350,6 +359,7 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
         desk->mesh = Mesh::createCube(1.0f);
         desk->transform = glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.4f, -2.0f)), glm::vec3(1.8f, 0.05f, 0.8f));
         desk->materialColor = glm::vec3(0.25f, 0.15f, 0.08f);
+        desk->roughness = 0.7f; // wood
         m_props.push_back(std::move(desk));
 
         // Desk legs
@@ -360,6 +370,7 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
                 leg->transform = glm::scale(glm::translate(glm::mat4(1.0f),
                     glm::vec3(dx, 0.2f, -2.0f + dz)), glm::vec3(0.05f, 0.4f, 0.05f));
                 leg->materialColor = glm::vec3(0.2f, 0.12f, 0.06f);
+                leg->roughness = 0.7f; // wood
                 m_props.push_back(std::move(leg));
             }
         }
@@ -369,6 +380,7 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
         chair->mesh = Mesh::createCube(1.0f);
         chair->transform = glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.25f, -1.0f)), glm::vec3(0.4f, 0.05f, 0.4f));
         chair->materialColor = glm::vec3(0.3f, 0.18f, 0.1f);
+        chair->roughness = 0.7f; // wood
         m_props.push_back(std::move(chair));
 
         // Ink bottles on desk (small cubes)
@@ -378,6 +390,7 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
             ink->transform = glm::scale(glm::translate(glm::mat4(1.0f),
                 glm::vec3(dx, 0.47f, -2.2f)), glm::vec3(0.04f, 0.06f, 0.04f));
             ink->materialColor = glm::vec3(0.05f, 0.05f, 0.1f); // dark ink
+            ink->roughness = 0.15f; // glossy glass bottles
             m_props.push_back(std::move(ink));
         }
 
@@ -386,6 +399,7 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
         shelf->mesh = Mesh::createCube(1.0f);
         shelf->transform = glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(-2.0f, 1.5f, -3.9f)), glm::vec3(1.5f, 0.04f, 0.3f));
         shelf->materialColor = glm::vec3(0.2f, 0.13f, 0.07f);
+        shelf->roughness = 0.7f; // wood
         m_props.push_back(std::move(shelf));
 
         // Small artwork on back wall
@@ -417,9 +431,11 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
         candle->mesh = Mesh::createCube(1.0f);
         candle->transform = glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(0.6f, 0.48f, -2.0f)), glm::vec3(0.03f, 0.1f, 0.03f));
         candle->materialColor = glm::vec3(0.9f, 0.85f, 0.7f); // white-ish wax
+        candle->roughness = 0.3f; // waxy surface
+        candle->emissive = glm::vec3(1.5f, 1.1f, 0.5f); // warm glow, >1.0 triggers bloom
         m_props.push_back(std::move(candle));
 
-        m_pointLights.push_back({{0.6f, 0.6f, -2.0f}, {1.0f, 0.8f, 0.4f}, 6.0f, true});
+        m_pointLights.push_back({{0.6f, 0.6f, -2.0f}, {1.0f, 0.8f, 0.4f}, 6.0f, 6.0f, true});
 
         // Ceiling light (dim, overhead)
         m_pointLights.push_back({{0.0f, 2.8f, 0.0f}, {0.4f, 0.35f, 0.3f}, 8.0f, false});
@@ -450,11 +466,10 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
             m_books.push_back(std::move(b));
         }
 
-        m_player.setWorldBounds(-3.5f, 3.5f, -3.5f, 3.5f);
-
         // Intimate fog — close, warm
+        // Exponential fog: uFogStart=density, uFogEnd=max distance
         renderer.getPostProcess().setFogParams(
-            glm::vec3(0.03f, 0.025f, 0.02f), 5.0f, 15.0f, 0.1f, 100.0f);
+            glm::vec3(0.03f, 0.025f, 0.02f), 6.0f, 15.0f, 0.1f, 100.0f);
     }
 
     // Copy point lights from room def (if any were in JSON)
@@ -483,6 +498,11 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
         m_fmvOverlays.push_back(std::move(overlay));
     }
 
+    // Set player world bounds and collision boxes from room definition
+    m_player.setWorldBounds(m_currentRoom.boundsMinX, m_currentRoom.boundsMaxX,
+                            m_currentRoom.boundsMinZ, m_currentRoom.boundsMaxZ);
+    m_player.setCollisionBoxes(m_currentRoom.collisionBoxes);
+
     // Load depth pre-pass geometry (hidden geometry for occlusion)
     if (!m_currentRoom.depthGeometryPath.empty()) {
         m_depthGeometry = std::make_unique<Model>();
@@ -500,6 +520,13 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
         m_audio->stopAmbient();
         m_audio->loadAmbient(m_currentRoom.ambientAudioPath);
         m_audio->playAmbient();
+    }
+
+    // Set reverb from room definition (once per room load, not per frame)
+    if (m_audio) {
+        m_audio->setReverb(m_currentRoom.reverb.enabled,
+                           m_currentRoom.reverb.feedback,
+                           m_currentRoom.reverb.delayMs);
     }
 
     std::cout << "Scene: room '" << m_currentRoom.name << "' loaded — "
@@ -531,7 +558,7 @@ void Scene::update(float dt, const InputManager& input, Renderer& renderer, Audi
 
     // Camera update: FP or fixed
     if (m_currentRoom.firstPerson) {
-        float eyeHeight = 3.0f + m_player.getHeadBob();
+        float eyeHeight = m_currentRoom.eyeHeight + m_player.getHeadBob();
         m_camera.updateFromPlayer(m_player.getPosition(), eyeHeight,
                                   m_player.getSmoothYaw(), m_player.getSmoothPitch());
     }
@@ -544,13 +571,6 @@ void Scene::update(float dt, const InputManager& input, Renderer& renderer, Audi
     // Audio: footsteps, reverb, listener position
     if (audio) {
         audio->updateFootsteps(dt, m_playerMoving);
-        // Softer reverb: first-person rooms (hallways) get subtle echo,
-        // fixed-cam rooms (studios) get minimal reverb
-        if (m_currentRoom.firstPerson) {
-            audio->setReverb(true, 0.15f, 300.0f);
-        } else {
-            audio->setReverb(false, 0.1f, 200.0f);
-        }
 
         // Update listener for spatial audio
         glm::vec3 lookDir = m_player.getLookDirection();
@@ -613,10 +633,9 @@ void Scene::update(float dt, const InputManager& input, Renderer& renderer, Audi
     // Flicker point lights
     for (auto& light : m_pointLights) {
         if (light.flicker) {
-            // Subtle random intensity variation
             float flicker = 0.9f + 0.1f * std::sin(m_propTime * 8.0f + light.position.x * 7.0f)
                           + 0.05f * std::sin(m_propTime * 13.0f + light.position.z * 11.0f);
-            light.radius = light.radius * flicker / (0.9f + 0.1f); // normalize
+            light.radius = light.baseRadius * flicker;
         }
     }
 
@@ -659,13 +678,17 @@ void Scene::renderObjects() {
     m_meshShader.setMat4("uView", glm::value_ptr(m_camera.getView()));
     m_meshShader.setMat4("uProjection", glm::value_ptr(m_camera.getProjection()));
 
+    // Camera position for specular
+    glm::vec3 camPos = m_camera.getPosition();
+    m_meshShader.setVec3("uViewPos", camPos.x, camPos.y, camPos.z);
+
     // Directional light
     m_meshShader.setVec3("uAmbient", m_currentRoom.ambientColor.x, m_currentRoom.ambientColor.y, m_currentRoom.ambientColor.z);
     m_meshShader.setVec3("uLightDir", m_currentRoom.lightDir.x, m_currentRoom.lightDir.y, m_currentRoom.lightDir.z);
     m_meshShader.setVec3("uLightColor", m_currentRoom.lightColor.x, m_currentRoom.lightColor.y, m_currentRoom.lightColor.z);
 
     // Point lights
-    int numLights = std::min(static_cast<int>(m_pointLights.size()), 4);
+    int numLights = std::min(static_cast<int>(m_pointLights.size()), 8);
     m_meshShader.setInt("uNumPointLights", numLights);
     for (int i = 0; i < numLights; i++) {
         std::string prefix = "uPointLightPos[" + std::to_string(i) + "]";
@@ -679,10 +702,14 @@ void Scene::renderObjects() {
     // Render props
     for (const auto& prop : m_props) {
         m_meshShader.setMat4("uModel", glm::value_ptr(prop->transform));
+        glm::mat3 normalMatrix = glm::transpose(glm::inverse(glm::mat3(prop->transform)));
+        m_meshShader.setMat3("uNormalMatrix", glm::value_ptr(normalMatrix));
 
         // Highlight for book-linked props
         float highlight = (prop->bookIndex >= 0 && prop->bookIndex == m_nearBookIndex) ? m_highlightAmount : 0.0f;
         m_meshShader.setFloat("uHighlight", highlight);
+
+        m_meshShader.setFloat("uRoughness", prop->roughness);
 
         if (prop->model) {
             glDisable(GL_CULL_FACE);
@@ -690,6 +717,8 @@ void Scene::renderObjects() {
             glEnable(GL_CULL_FACE);
         } else {
             m_meshShader.setVec3("uMaterialColor", prop->materialColor.x, prop->materialColor.y, prop->materialColor.z);
+            m_meshShader.setVec3("uEmissive", prop->emissive.x, prop->emissive.y, prop->emissive.z);
+            m_meshShader.setInt("uHasNormalMap", 0);
 
             bool hasTex = prop->texture.getID() != 0;
             m_meshShader.setInt("uHasTexture", hasTex ? 1 : 0);
@@ -706,6 +735,8 @@ void Scene::renderObjects() {
     if (!m_currentRoom.firstPerson) {
         m_meshShader.setVec3("uMaterialColor", 0.6f, 0.3f, 0.2f);
         m_meshShader.setInt("uHasTexture", 0);
+        m_meshShader.setVec3("uEmissive", 0.0f, 0.0f, 0.0f);
+        m_meshShader.setInt("uHasNormalMap", 0);
         m_player.render(m_meshShader);
     }
 }

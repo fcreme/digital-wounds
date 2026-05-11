@@ -3,6 +3,7 @@
 #include "renderer/Camera.h"
 
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <algorithm>
 #include <cmath>
@@ -54,16 +55,29 @@ void Player::update(float dt, const InputManager& input, const Camera& camera) {
         movement.z -= rightZ * m_moveSpeed * dt;
     }
 
-    m_position += movement;
+    // Try X and Z movement separately for slide-along-wall collision
+    float newX = m_position.x + movement.x;
+    float newZ = m_position.z + movement.z;
+
+    // Test X axis
+    if (!collidesWithAny(newX, m_position.z)) {
+        m_position.x = newX;
+    }
+    // Test Z axis
+    if (!collidesWithAny(m_position.x, newZ)) {
+        m_position.z = newZ;
+    }
 
     // Clamp to world bounds
     m_position.x = std::clamp(m_position.x, m_boundsMinX, m_boundsMaxX);
     m_position.z = std::clamp(m_position.z, m_boundsMinZ, m_boundsMaxZ);
 
-    // Head bob — only advance when moving
-    bool isMoving = glm::length(movement) > 0.001f;
+    // Head bob — scale frequency by actual movement speed for consistency
+    float moveLen = glm::length(movement);
+    bool isMoving = moveLen > 0.001f;
     if (isMoving) {
-        m_headBobTime += dt;
+        float speedRatio = (moveLen / dt) / m_moveSpeed; // normalized to max speed
+        m_headBobTime += dt * std::min(speedRatio, 1.0f);
         m_headBobOffset = std::sin(m_headBobTime * HEAD_BOB_FREQ) * HEAD_BOB_AMP;
     } else {
         // Smoothly return to zero
@@ -87,6 +101,8 @@ void Player::render(Shader& shader) {
     model = glm::scale(model, glm::vec3(0.4f, 0.9f, 0.3f)); // tall thin box
 
     shader.setMat4("uModel", glm::value_ptr(model));
+    glm::mat3 normalMatrix = glm::transpose(glm::inverse(glm::mat3(model)));
+    shader.setMat3("uNormalMatrix", glm::value_ptr(normalMatrix));
     m_mesh.draw();
 }
 
@@ -95,6 +111,25 @@ void Player::setWorldBounds(float minX, float maxX, float minZ, float maxZ) {
     m_boundsMaxX = maxX;
     m_boundsMinZ = minZ;
     m_boundsMaxZ = maxZ;
+}
+
+void Player::setCollisionBoxes(const std::vector<CollisionBox>& boxes) {
+    m_collisionBoxes = boxes;
+}
+
+bool Player::collidesWithAny(float x, float z) const {
+    // Player is a circle with PLAYER_RADIUS on the XZ plane
+    // Test against each AABB using closest-point distance
+    for (const auto& box : m_collisionBoxes) {
+        float closestX = std::clamp(x, box.min.x, box.max.x);
+        float closestZ = std::clamp(z, box.min.y, box.max.y);
+        float dx = x - closestX;
+        float dz = z - closestZ;
+        if (dx * dx + dz * dz < PLAYER_RADIUS * PLAYER_RADIUS) {
+            return true;
+        }
+    }
+    return false;
 }
 
 } // namespace dw

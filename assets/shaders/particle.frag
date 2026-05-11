@@ -24,25 +24,28 @@ void main() {
 
     // Per-type procedural shapes
     if (vType == 0) {
-        // Dust: soft circle
-        alpha = smoothstep(0.5, 0.2, dist) * vColor.a;
+        // Dust: nested smoothstep for volumetric density variation
+        float outer = smoothstep(0.5, 0.2, dist);
+        float inner = smoothstep(0.3, 0.0, dist) * 0.6 + 0.4;
+        alpha = outer * inner * vColor.a;
     }
     else if (vType == 1) {
-        // Fog: very diffuse falloff
-        alpha = smoothstep(0.5, 0.0, dist) * vColor.a;
-        alpha *= 0.7 + 0.3 * smoothstep(0.5, 0.1, dist);
+        // Fog: natural Gaussian-like exponential falloff
+        alpha = exp(-dist * dist * 3.0) * vColor.a;
     }
     else if (vType == 2) {
-        // Fireflies: bright core + outer glow halo
+        // Fireflies: bright core + inner halo + secondary soft outer halo
         float core = smoothstep(0.15, 0.0, dist);
         float halo = smoothstep(0.5, 0.1, dist) * 0.4;
-        alpha = (core + halo) * vColor.a;
+        float outerGlow = smoothstep(0.5, 0.25, dist) * 0.15;
+        alpha = (core + halo + outerGlow) * vColor.a;
     }
     else if (vType == 3) {
-        // Fire: vertically stretched, brighter at bottom
+        // Fire: vertically stretched with animated flicker wave
         vec2 uv = gl_PointCoord;
-        float yFade = smoothstep(0.0, 0.7, uv.y); // brighter at bottom (y=0)
-        float xDist = abs(uv.x - 0.5);
+        float flicker = sin(uv.y * 8.0) * 0.05;
+        float yFade = smoothstep(0.0, 0.7, uv.y);
+        float xDist = abs(uv.x - 0.5 + flicker);
         float shape = smoothstep(0.5, 0.1, xDist) * smoothstep(1.0, 0.2, uv.y);
         alpha = shape * yFade * vColor.a;
     }

@@ -20,6 +20,7 @@ struct PointLightDef {
     glm::vec3 position{0.0f};
     glm::vec3 color{1.0f};
     float radius = 5.0f;
+    float baseRadius = 5.0f;  // unflickered radius for animation
     bool flicker = false;
 };
 
@@ -46,6 +47,17 @@ struct FMVOverlayDef {
     glm::vec3 tint{1.0f};      // color tint
 };
 
+struct CollisionBox {
+    glm::vec2 min{0.0f};  // X, Z
+    glm::vec2 max{0.0f};  // X, Z
+};
+
+struct ReverbDef {
+    bool enabled = false;
+    float feedback = 0.15f;
+    float delayMs = 300.0f;
+};
+
 struct RoomDef {
     std::string name;
     std::string backgroundPath;
@@ -54,6 +66,22 @@ struct RoomDef {
     std::string depthGeometryPath;
 
     bool firstPerson = false;
+
+    // Player
+    float eyeHeight = 1.7f;
+    glm::vec3 playerSpawn{0.0f};
+
+    // World bounds (AABB clamp for player)
+    float boundsMinX = -10.0f;
+    float boundsMaxX = 10.0f;
+    float boundsMinZ = -10.0f;
+    float boundsMaxZ = 10.0f;
+
+    // Collision boxes (obstacles)
+    std::vector<CollisionBox> collisionBoxes;
+
+    // Audio reverb
+    ReverbDef reverb;
 
     // Camera
     glm::vec3 cameraPos{0.0f, 2.0f, 5.0f};

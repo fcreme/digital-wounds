@@ -52,8 +52,8 @@ void Renderer::renderBackground() {
 }
 
 void Renderer::renderShadowPass(Scene& scene, const glm::vec3& lightDir) {
-    // Update light space matrix centered on scene origin
-    m_shadowMap.updateLightSpaceMatrix(lightDir, glm::vec3(0.0f, 0.5f, 0.0f), 10.0f);
+    // Shadow frustum sized to cover the scene
+    m_shadowMap.updateLightSpaceMatrix(lightDir, glm::vec3(0.0f, 0.5f, 0.0f), 20.0f);
 
     m_shadowMap.beginCapture();
 
