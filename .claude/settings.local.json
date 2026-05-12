@@ -34,7 +34,8 @@
       "Bash(/c/msys64/usr/bin/bash.exe:*)",
       "Bash(curl:*)",
       "Bash(pip show:*)",
-      "Bash(pip3 show:*)"
+      "Bash(pip3 show:*)",
+      "Bash(wc:*)"
     ]
   }
 }
