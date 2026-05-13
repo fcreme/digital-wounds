@@ -24,6 +24,7 @@ struct RoomPropDef {
     float rotationSpeed = 0.0f;    // Y-axis rotation (rad/s)
     int proceduralArtSeed = -1;    // >=0 triggers procedural texture
     int bookIndex = -1;            // links prop to a book for highlight
+    int itemIndex = -1;            // links prop to an item for highlight
 };
 
 struct TriggerZoneDef {
@@ -31,12 +32,27 @@ struct TriggerZoneDef {
     float radius = 1.0f;
     std::string targetRoom;
     glm::vec3 spawnPos{0.0f};
+    std::string requiresItem;   // item id needed to use this trigger
+    std::string lockedMessage;  // message shown when item is missing
+    bool consumeItem = false;   // remove item from inventory on use
 };
 
 struct BookDef {
     glm::vec3 position{0.0f};
     float interactRadius = 2.5f;
     std::vector<std::string> pages;
+    std::string requiresItem;   // item id needed to read this book
+    std::string lockedMessage;  // message shown when item is missing
+    bool consumeItem = false;   // remove item from inventory on use
+};
+
+struct ItemDef {
+    std::string id;
+    std::string name;
+    std::string description;
+    std::string iconPath;
+    glm::vec3 position{0.0f};
+    float interactRadius = 2.5f;
 };
 
 struct FogParamsDef {
@@ -140,6 +156,9 @@ struct RoomDef {
 
     // Interactive books
     std::vector<BookDef> books;
+
+    // Pickable items
+    std::vector<ItemDef> items;
 
     // Fog parameters
     FogParamsDef fogParams;

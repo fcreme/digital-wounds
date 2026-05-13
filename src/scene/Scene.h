@@ -11,6 +11,8 @@
 #include "fx/FMVOverlay.h"
 #include "world/Player.h"
 #include "world/Book.h"
+#include "world/Item.h"
+#include "world/Inventory.h"
 
 #include <string>
 #include <memory>
@@ -29,6 +31,9 @@ struct TriggerZone {
     float radius = 1.0f;
     std::string targetRoom;
     glm::vec3 spawnPos{0.0f};
+    std::string requiresItem;
+    std::string lockedMessage;
+    bool consumeItem = false;
 };
 
 class Scene {
@@ -76,6 +81,7 @@ private:
         float roughness = 0.7f;  // 0 = mirror, 1 = matte
         glm::vec3 emissive{0.0f};
         int bookIndex = -1;  // if this prop represents a book, link to m_books index
+        int itemIndex = -1;  // if this prop represents an item, link to m_worldItems index
     };
     std::vector<std::unique_ptr<PropInstance>> m_props;
     std::vector<TriggerZone> m_triggers;
@@ -88,10 +94,19 @@ private:
     int m_nearBookIndex = -1;  // index of book player is near, -1 if none
     Book* m_activeBook = nullptr;  // currently open book
 
+    // Items and inventory
+    std::vector<std::unique_ptr<WorldItem>> m_worldItems;
+    int m_nearItemIndex = -1;
+    Inventory m_inventory;
+    std::string m_lockedMessage;
+    float m_lockedMessageTimer = 0.0f;
+    std::string m_pickupMessage;
+    float m_pickupMessageTimer = 0.0f;
+
     float m_propTime = 0.0f;
     bool m_playerMoving = false;
     float m_triggerCooldown = 0.0f;
-    float m_highlightAmount = 0.0f;  // 0..1 smooth highlight for looked-at book
+    float m_highlightAmount = 0.0f;  // 0..1 smooth highlight for looked-at book/item
 
     AudioManager* m_audio = nullptr;  // non-owning, set during update
 

@@ -124,6 +124,7 @@ bool loadRoomDef(const std::string& path, RoomDef& out) {
             pd.rotationSpeed = getOr<float>(pr, "rotation_speed", 0.0f);
             pd.proceduralArtSeed = getOr<int>(pr, "procedural_art_seed", -1);
             pd.bookIndex = getOr<int>(pr, "book_index", -1);
+            pd.itemIndex = getOr<int>(pr, "item_index", -1);
             out.props.push_back(pd);
         }
     }
@@ -169,6 +170,9 @@ bool loadRoomDef(const std::string& path, RoomDef& out) {
             td.radius = getOr<float>(tr, "radius", 1.0f);
             td.targetRoom = getOr<std::string>(tr, "target_room", "");
             if (tr.contains("spawn_pos")) td.spawnPos = parseVec3(tr["spawn_pos"]);
+            td.requiresItem = getOr<std::string>(tr, "requires_item", "");
+            td.lockedMessage = getOr<std::string>(tr, "locked_message", "It's locked.");
+            td.consumeItem = getOr<bool>(tr, "consume_item", false);
             out.triggers.push_back(td);
         }
     }
@@ -184,7 +188,24 @@ bool loadRoomDef(const std::string& path, RoomDef& out) {
                     bd.pages.push_back(page.get<std::string>());
                 }
             }
+            bd.requiresItem = getOr<std::string>(bk, "requires_item", "");
+            bd.lockedMessage = getOr<std::string>(bk, "locked_message", "It's locked.");
+            bd.consumeItem = getOr<bool>(bk, "consume_item", false);
             out.books.push_back(bd);
+        }
+    }
+
+    // Items
+    if (j.contains("items")) {
+        for (const auto& it : j["items"]) {
+            ItemDef id;
+            id.id = getOr<std::string>(it, "id", "");
+            id.name = getOr<std::string>(it, "name", "");
+            id.description = getOr<std::string>(it, "description", "");
+            id.iconPath = getOr<std::string>(it, "icon", "");
+            if (it.contains("position")) id.position = parseVec3(it["position"]);
+            id.interactRadius = getOr<float>(it, "interact_radius", 2.5f);
+            out.items.push_back(id);
         }
     }
 
@@ -204,7 +225,8 @@ bool loadRoomDef(const std::string& path, RoomDef& out) {
               << out.fmvOverlays.size() << " FMV overlays, "
               << out.collisionBoxes.size() << " collision boxes, "
               << out.triggers.size() << " triggers, "
-              << out.books.size() << " books)\n";
+              << out.books.size() << " books, "
+              << out.items.size() << " items)\n";
     return true;
 }
 

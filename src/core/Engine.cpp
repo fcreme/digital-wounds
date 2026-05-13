@@ -80,8 +80,9 @@ bool Engine::init(const std::string& title, int width, int height) {
         std::cerr << "Audio init failed (continuing without audio)\n";
         m_audio.reset();
     } else {
-        // Generate procedural footstep (soft stone-floor thud)
+        // Generate procedural sounds
         m_audio->generateFootstepSound();
+        m_audio->generatePickupSound();
     }
 
     // Renderer

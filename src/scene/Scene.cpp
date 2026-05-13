@@ -66,6 +66,8 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
     m_books.clear();
     m_nearBookIndex = -1;
     m_activeBook = nullptr;
+    m_worldItems.clear();
+    m_nearItemIndex = -1;
     m_depthGeometry.reset();
 
     if (!loadRoomDef(roomDefPath, m_currentRoom)) {
@@ -119,6 +121,7 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
         prop->emissive = propDef.emissive;
         prop->rotationSpeed = propDef.rotationSpeed;
         prop->bookIndex = propDef.bookIndex;
+        prop->itemIndex = propDef.itemIndex;
 
         m_props.push_back(std::move(prop));
     }
@@ -135,6 +138,9 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
         tz.radius = td.radius;
         tz.targetRoom = td.targetRoom;
         tz.spawnPos = td.spawnPos;
+        tz.requiresItem = td.requiresItem;
+        tz.lockedMessage = td.lockedMessage;
+        tz.consumeItem = td.consumeItem;
         m_triggers.push_back(tz);
     }
 
@@ -146,6 +152,17 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
             b->addPage(page);
         }
         m_books.push_back(std::move(b));
+    }
+
+    // Load items from room definition (skip items already in inventory)
+    for (const auto& idef : m_currentRoom.items) {
+        auto item = std::make_unique<WorldItem>();
+        item->init(idef.id, idef.name, idef.description, idef.iconPath,
+                   idef.position, idef.interactRadius);
+        if (m_inventory.hasItem(idef.id)) {
+            item->setGone();
+        }
+        m_worldItems.push_back(std::move(item));
     }
 
     // Set fog params from room definition
@@ -213,6 +230,7 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
     std::cout << "Scene: room '" << m_currentRoom.name << "' loaded — "
               << m_props.size() << " props, " << m_pointLights.size() << " lights, "
               << m_triggers.size() << " triggers, " << m_books.size() << " books, "
+              << m_worldItems.size() << " items, "
               << m_fmvOverlays.size() << " FMV overlays"
               << (m_currentRoom.firstPerson ? " [FP]" : " [Fixed]") << "\n";
     return true;
@@ -224,12 +242,28 @@ void Scene::update(float dt, const InputManager& input, Renderer& renderer, Audi
     m_transition.update(dt);
     if (m_transition.isActive()) return;
 
+    // If inventory is open, only update inventory (block player movement)
+    if (m_inventory.isOpen()) {
+        m_inventory.update(dt, input);
+        // Tab to close is handled inside inventory, but also check here
+        if (input.isKeyPressed(SDL_SCANCODE_TAB)) {
+            m_inventory.toggle();
+        }
+        return;
+    }
+
     // If a book is open, only update the book (block player movement)
     if (m_activeBook) {
         m_activeBook->update(dt, input);
         if (!m_activeBook->isOpen()) {
             m_activeBook = nullptr;
         }
+        return;
+    }
+
+    // Tab to open inventory
+    if (input.isKeyPressed(SDL_SCANCODE_TAB)) {
+        m_inventory.toggle();
         return;
     }
 
@@ -283,14 +317,54 @@ void Scene::update(float dt, const InputManager& input, Renderer& renderer, Audi
         }
     }
 
+    // Check item proximity / look-at
+    m_nearItemIndex = -1;
+    for (int i = 0; i < static_cast<int>(m_worldItems.size()); i++) {
+        if (!m_worldItems[i]->isIdle()) continue;
+        if (!m_worldItems[i]->isPlayerNear(m_player.getPosition())) continue;
+
+        if (m_currentRoom.firstPerson) {
+            glm::vec3 toItem = glm::normalize(m_worldItems[i]->getPosition() - camPos);
+            float dotAngle = glm::dot(lookDir, toItem);
+            if (dotAngle > 0.866f) {
+                m_nearItemIndex = i;
+                break;
+            }
+        } else {
+            m_nearItemIndex = i;
+            break;
+        }
+    }
+
     // Smooth highlight animation
-    float targetHighlight = (m_nearBookIndex >= 0) ? 1.0f : 0.0f;
+    float targetHighlight = (m_nearBookIndex >= 0 || m_nearItemIndex >= 0) ? 1.0f : 0.0f;
     m_highlightAmount += (targetHighlight - m_highlightAmount) * std::min(dt * 8.0f, 1.0f);
 
-    // E to interact with nearby book
-    if (m_nearBookIndex >= 0 && input.isKeyPressed(SDL_SCANCODE_E)) {
-        m_books[m_nearBookIndex]->open();
-        m_activeBook = m_books[m_nearBookIndex].get();
+    // E to interact with nearby item (priority over book)
+    if (m_nearItemIndex >= 0 && input.isKeyPressed(SDL_SCANCODE_E)) {
+        auto& item = m_worldItems[m_nearItemIndex];
+        item->pickUp();
+        m_inventory.addItem(item->getId(), item->getName(),
+                           item->getDescription(), item->getIconPath());
+        m_pickupMessage = "Picked up: " + item->getName();
+        m_pickupMessageTimer = 2.0f;
+        if (m_audio) {
+            m_audio->playSound("pickup", 0.6f);
+        }
+    }
+    // E to interact with nearby book (with lock check)
+    else if (m_nearBookIndex >= 0 && input.isKeyPressed(SDL_SCANCODE_E)) {
+        const auto& bookDef = m_currentRoom.books[m_nearBookIndex];
+        if (!bookDef.requiresItem.empty() && !m_inventory.hasItem(bookDef.requiresItem)) {
+            m_lockedMessage = bookDef.lockedMessage;
+            m_lockedMessageTimer = 2.0f;
+        } else {
+            if (!bookDef.requiresItem.empty() && bookDef.consumeItem) {
+                m_inventory.removeItem(bookDef.requiresItem);
+            }
+            m_books[m_nearBookIndex]->open();
+            m_activeBook = m_books[m_nearBookIndex].get();
+        }
     }
 
     // Animate rotating props
@@ -320,6 +394,15 @@ void Scene::update(float dt, const InputManager& input, Renderer& renderer, Audi
         }
     }
 
+    // Update world items (pickup animation)
+    for (auto& item : m_worldItems) {
+        item->update(dt);
+    }
+
+    // Decrement message timers
+    if (m_lockedMessageTimer > 0.0f) m_lockedMessageTimer -= dt;
+    if (m_pickupMessageTimer > 0.0f) m_pickupMessageTimer -= dt;
+
     // After a room load, wait until player leaves all trigger zones before re-arming
     if (m_triggerCooldown > 0.0f) {
         bool insideAny = false;
@@ -342,6 +425,19 @@ void Scene::update(float dt, const InputManager& input, Renderer& renderer, Audi
         float dist = glm::distance(glm::vec2(m_player.getPosition().x, m_player.getPosition().z),
                                     glm::vec2(trigger.position.x, trigger.position.z));
         if (dist < trigger.radius) {
+            // Check if trigger requires an item
+            if (!trigger.requiresItem.empty() && !m_inventory.hasItem(trigger.requiresItem)) {
+                m_lockedMessage = trigger.lockedMessage;
+                m_lockedMessageTimer = 2.0f;
+                m_triggerCooldown = 1.0f;  // prevent spamming the message
+                break;
+            }
+
+            // Consume item if needed
+            if (!trigger.requiresItem.empty() && trigger.consumeItem) {
+                m_inventory.removeItem(trigger.requiresItem);
+            }
+
             std::string targetRoom = trigger.targetRoom;
             glm::vec3 spawnPos = trigger.spawnPos;
             m_transition.startTransition(1.5f, [this, targetRoom, spawnPos, &renderer]() {
@@ -386,8 +482,10 @@ void Scene::renderObjects() {
         glm::mat3 normalMatrix = glm::transpose(glm::inverse(glm::mat3(prop->transform)));
         m_meshShader.setMat3("uNormalMatrix", glm::value_ptr(normalMatrix));
 
-        // Highlight for book-linked props
-        float highlight = (prop->bookIndex >= 0 && prop->bookIndex == m_nearBookIndex) ? m_highlightAmount : 0.0f;
+        // Highlight for book-linked or item-linked props
+        float highlight = 0.0f;
+        if (prop->bookIndex >= 0 && prop->bookIndex == m_nearBookIndex) highlight = m_highlightAmount;
+        if (prop->itemIndex >= 0 && prop->itemIndex == m_nearItemIndex) highlight = m_highlightAmount;
         m_meshShader.setFloat("uHighlight", highlight);
 
         m_meshShader.setFloat("uRoughness", prop->roughness);
@@ -441,19 +539,51 @@ void Scene::renderOverlays() {
 }
 
 void Scene::renderUI(UIOverlay& ui, int screenWidth, int screenHeight) {
+    // Render inventory UI (on top of everything when open)
+    if (m_inventory.isOpen()) {
+        m_inventory.renderUI(ui, screenWidth, screenHeight);
+        return;
+    }
+
     // Crosshair in FP mode (only when no book open)
     if (m_currentRoom.firstPerson && !m_activeBook) {
         ui.drawCrosshair();
     }
 
+    // Show interaction prompt when looking at an item
+    if (m_nearItemIndex >= 0 && !m_activeBook) {
+        ui.drawPrompt("Press E to pick up");
+    }
     // Show interaction prompt when looking at a book
-    if (m_nearBookIndex >= 0 && !m_activeBook) {
+    else if (m_nearBookIndex >= 0 && !m_activeBook) {
         ui.drawPrompt("Press E to read");
     }
 
     // Render active book viewer
     if (m_activeBook) {
         m_activeBook->renderUI(ui, screenWidth, screenHeight);
+    }
+
+    // Locked message (red, centered, fading)
+    if (m_lockedMessageTimer > 0.0f && !m_lockedMessage.empty()) {
+        float alpha = std::min(m_lockedMessageTimer, 1.0f);
+        float textScale = 2.5f;
+        float textW = m_lockedMessage.length() * 8.0f * textScale;
+        float textX = (screenWidth - textW) * 0.5f;
+        float textY = screenHeight * 0.4f;
+        ui.drawText(m_lockedMessage, textX, textY, textScale,
+                    glm::vec4(0.9f, 0.2f, 0.15f, alpha));
+    }
+
+    // Pickup notification (white, top-center, fading)
+    if (m_pickupMessageTimer > 0.0f && !m_pickupMessage.empty()) {
+        float alpha = std::min(m_pickupMessageTimer, 1.0f);
+        float textScale = 2.0f;
+        float textW = m_pickupMessage.length() * 8.0f * textScale;
+        float textX = (screenWidth - textW) * 0.5f;
+        float textY = screenHeight * 0.15f;
+        ui.drawText(m_pickupMessage, textX, textY, textScale,
+                    glm::vec4(0.9f, 0.85f, 0.7f, alpha));
     }
 }
 
@@ -573,6 +703,7 @@ void Scene::shutdown() {
     m_props.clear();
     m_triggers.clear();
     m_pointLights.clear();
+    m_worldItems.clear();
 }
 
 } // namespace dw

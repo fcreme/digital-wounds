@@ -226,12 +226,24 @@
         { "position": [-8.0, 6.0, -8.0], "color": [0.8, 0.5, 0.2], "radius": 20.0, "flicker": true },
         { "position": [8.0, 6.0, -8.0], "color": [0.8, 0.5, 0.2], "radius": 20.0, "flicker": true }
     ],
+    "items": [
+        {
+            "id": "hallway_key",
+            "name": "Rusty Key",
+            "description": "A cold iron key, crudely forged.",
+            "icon": "",
+            "position": [2.0, 0.6, -3.0],
+            "interact_radius": 2.5
+        }
+    ],
     "triggers": [
         {
             "position": [0.0, 0.0, 14.0],
             "radius": 1.5,
             "target_room": "assets/rooms/test_room.json",
-            "spawn_pos": [0.0, 0.0, -3.0]
+            "spawn_pos": [0.0, 0.0, -3.0],
+            "requires_item": "hallway_key",
+            "locked_message": "The door won't budge."
         },
         {
             "position": [0.0, 0.0, -12.0],

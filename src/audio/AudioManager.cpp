@@ -127,6 +127,41 @@ void AudioManager::generateFootstepSound() {
     std::cout << "AudioManager: generated procedural footstep (" << numFrames << " frames)\n";
 }
 
+void AudioManager::generatePickupSound() {
+    const int sampleRate = m_spec.freq;
+    const int channels = m_spec.channels;
+    const float duration = 0.3f; // 300ms chime
+    const int numFrames = static_cast<int>(sampleRate * duration);
+
+    std::vector<float> mono(numFrames);
+    for (int i = 0; i < numFrames; i++) {
+        float t = static_cast<float>(i) / sampleRate;
+
+        // Two-tone ascending chime (C5 ~523Hz, E5 ~659Hz)
+        float env = std::exp(-t * 8.0f);
+        float tone1 = std::sin(2.0f * static_cast<float>(M_PI) * 523.0f * t) * env;
+        float tone2 = std::sin(2.0f * static_cast<float>(M_PI) * 659.0f * t) * env * 0.7f;
+
+        // Second tone fades in slightly after the first
+        float blend = std::min(t * 10.0f, 1.0f);
+        mono[i] = (tone1 * (1.0f - blend * 0.3f) + tone2 * blend) * 0.5f;
+    }
+
+    SoundData sound;
+    sound.spec = m_spec;
+    sound.buffer.resize(numFrames * channels * sizeof(Sint16));
+    Sint16* out = reinterpret_cast<Sint16*>(sound.buffer.data());
+    for (int i = 0; i < numFrames; i++) {
+        Sint16 sample = static_cast<Sint16>(std::clamp(mono[i] * 32767.0f, -32768.0f, 32767.0f));
+        for (int c = 0; c < channels; c++) {
+            out[i * channels + c] = sample;
+        }
+    }
+
+    m_sounds["pickup"] = std::move(sound);
+    std::cout << "AudioManager: generated procedural pickup chime (" << numFrames << " frames)\n";
+}
+
 void AudioManager::playSound(const std::string& name, float volume, float pitch) {
     auto it = m_sounds.find(name);
     if (it == m_sounds.end()) return;

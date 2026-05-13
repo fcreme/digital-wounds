@@ -36,6 +36,7 @@ public:
 
     // Footsteps
     void generateFootstepSound(); // procedural soft stone footstep
+    void generatePickupSound();   // procedural chime for item pickup
     void playFootstep();
     void setFootstepInterval(float seconds) { m_footstepInterval = seconds; }
     void updateFootsteps(float dt, bool isMoving);
