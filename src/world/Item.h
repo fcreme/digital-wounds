@@ -34,6 +34,7 @@ public:
     const std::string& getDescription() const { return m_description; }
     const std::string& getIconPath() const { return m_iconPath; }
     const glm::vec3& getPosition() const { return m_worldPos; }
+    float getPickupProgress() const;
 
 private:
     std::string m_id;

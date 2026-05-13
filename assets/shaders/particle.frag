@@ -49,6 +49,13 @@ void main() {
         float shape = smoothstep(0.5, 0.1, xDist) * smoothstep(1.0, 0.2, uv.y);
         alpha = shape * yFade * vColor.a;
     }
+    else if (vType == 4) {
+        // Sparkle: bright sharp core with strong glow
+        float core = smoothstep(0.1, 0.0, dist) * 1.5;
+        float halo = smoothstep(0.4, 0.05, dist) * 0.6;
+        float outerGlow = smoothstep(0.5, 0.2, dist) * 0.2;
+        alpha = (core + halo + outerGlow) * vColor.a;
+    }
 
     if (alpha < 0.005) discard;
 

@@ -1,5 +1,6 @@
 #include "world/Item.h"
 
+#include <algorithm>
 #include <iostream>
 
 namespace dw {
@@ -38,6 +39,11 @@ void WorldItem::update(float dt) {
             m_state = ItemState::Gone;
         }
     }
+}
+
+float WorldItem::getPickupProgress() const {
+    if (m_state != ItemState::PickingUp) return 0.0f;
+    return std::min(m_pickupTimer / PICKUP_DURATION, 1.0f);
 }
 
 } // namespace dw

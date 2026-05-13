@@ -102,6 +102,7 @@ private:
     float m_lockedMessageTimer = 0.0f;
     std::string m_pickupMessage;
     float m_pickupMessageTimer = 0.0f;
+    float m_pickupFlashTimer = 0.0f;
 
     float m_propTime = 0.0f;
     bool m_playerMoving = false;

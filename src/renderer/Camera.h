@@ -16,16 +16,28 @@ public:
     // First-person camera — call each frame with player state
     void updateFromPlayer(const glm::vec3& playerPos, float eyeHeight, float yaw, float pitch);
 
+    // Camera shake
+    void shake(float intensity, float duration);
+    void updateShake(float dt);
+
     const glm::mat4& getView() const { return m_view; }
     const glm::mat4& getProjection() const { return m_projection; }
     const glm::vec3& getPosition() const { return m_position; }
 
 private:
+    void rebuildView();
+
     glm::vec3 m_position{0.0f, 1.5f, 5.0f};
     glm::vec3 m_target{0.0f, 0.0f, 0.0f};
 
     glm::mat4 m_view{1.0f};
     glm::mat4 m_projection{1.0f};
+
+    // Shake state
+    float m_shakeIntensity = 0.0f;
+    float m_shakeTimer = 0.0f;
+    float m_shakeDuration = 0.0f;
+    glm::vec3 m_shakeOffset{0.0f};
 };
 
 } // namespace dw

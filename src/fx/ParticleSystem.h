@@ -11,7 +11,8 @@ enum class ParticleType {
     Dust,       // slow floating specks
     Fog,        // slow drifting wisps
     Fireflies,  // glowing dots with random movement
-    Fire        // upward flames at light sources
+    Fire,       // upward flames at light sources
+    Sparkle     // burst particles for item pickup
 };
 
 struct ParticleEmitter {
@@ -32,6 +33,7 @@ public:
     bool init();
     void clear();
     void addEmitter(const ParticleEmitter& emitter);
+    void spawnBurst(const glm::vec3& origin, int count, ParticleType type);
     void update(float dt);
     void render(const glm::mat4& view, const glm::mat4& projection);
     void shutdown();

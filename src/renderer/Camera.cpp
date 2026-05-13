@@ -5,9 +5,10 @@
 namespace dw {
 
 void Camera::setup(const glm::vec3& position, const glm::vec3& target, const glm::vec3& up) {
+    (void)up;  // up vector always (0,1,0) — stored implicitly in rebuildView
     m_position = position;
     m_target = target;
-    m_view = glm::lookAt(position, target, up);
+    rebuildView();
 }
 
 void Camera::setPerspective(float fovDegrees, float aspect, float nearPlane, float farPlane) {
@@ -24,7 +25,36 @@ void Camera::updateFromPlayer(const glm::vec3& playerPos, float eyeHeight, float
     front = glm::normalize(front);
 
     m_target = m_position + front;
-    m_view = glm::lookAt(m_position, m_target, glm::vec3(0.0f, 1.0f, 0.0f));
+    rebuildView();
+}
+
+void Camera::shake(float intensity, float duration) {
+    m_shakeIntensity = intensity;
+    m_shakeDuration = duration;
+    m_shakeTimer = duration;
+}
+
+void Camera::updateShake(float dt) {
+    if (m_shakeTimer <= 0.0f) {
+        m_shakeOffset = glm::vec3(0.0f);
+        return;
+    }
+
+    m_shakeTimer -= dt;
+    if (m_shakeTimer < 0.0f) m_shakeTimer = 0.0f;
+
+    float remaining = m_shakeTimer / m_shakeDuration;
+    float elapsed = m_shakeDuration - m_shakeTimer;
+    float offsetX = m_shakeIntensity * std::sin(elapsed * 30.0f) * remaining;
+    float offsetY = m_shakeIntensity * std::sin(elapsed * 37.0f) * remaining;
+    m_shakeOffset = glm::vec3(offsetX, offsetY, 0.0f);
+
+    rebuildView();
+}
+
+void Camera::rebuildView() {
+    glm::vec3 pos = m_position + m_shakeOffset;
+    m_view = glm::lookAt(pos, m_target + m_shakeOffset, glm::vec3(0.0f, 1.0f, 0.0f));
 }
 
 } // namespace dw

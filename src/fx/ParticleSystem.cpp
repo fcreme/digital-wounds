@@ -2,6 +2,7 @@
 
 #include <glad/gl.h>
 #include <glm/gtc/type_ptr.hpp>
+#include <algorithm>
 #include <cmath>
 #include <cstdlib>
 #include <ctime>
@@ -54,6 +55,33 @@ void ParticleSystem::clear() {
     m_emitters.clear();
 }
 
+void ParticleSystem::spawnBurst(const glm::vec3& origin, int count, ParticleType type) {
+    for (int i = 0; i < count; i++) {
+        Particle p{};
+        p.type = type;
+        p.origin = origin;
+        p.area = glm::vec3(0.0f);
+        p.position = origin;
+        p.phaseOffset = randFloat() * 6.283f;
+        p.life = 0.0f;
+
+        // Random outward velocity
+        float theta = randFloat() * 6.283f;
+        float phi = randRange(-0.3f, 1.0f);
+        float speed = randRange(1.0f, 3.0f);
+        p.velocity = glm::vec3(
+            std::cos(theta) * speed * 0.5f,
+            phi * speed + 1.5f,
+            std::sin(theta) * speed * 0.5f
+        );
+        p.size = randRange(3.0f, 6.0f);
+        p.alpha = 0.9f;
+        p.color = glm::vec4(1.0f, 0.85f, 0.4f, 1.0f);
+
+        m_particles.push_back(p);
+    }
+}
+
 void ParticleSystem::addEmitter(const ParticleEmitter& emitter) {
     m_emitters.push_back(emitter);
 
@@ -104,6 +132,12 @@ void ParticleSystem::respawn(Particle& p) {
             p.velocity = glm::vec3(randRange(-0.3f, 0.3f), randRange(1.0f, 2.5f), randRange(-0.3f, 0.3f));
             p.size = randRange(4.0f, 8.0f);
             p.alpha = randRange(0.5f, 0.9f);
+            break;
+        case ParticleType::Sparkle:
+            // Burst particles don't respawn — they die
+            p.alpha = 0.0f;
+            p.velocity = glm::vec3(0.0f);
+            p.size = 0.0f;
             break;
     }
 }
@@ -166,8 +200,29 @@ void ParticleSystem::update(float dt) {
                 }
                 if (p.life > 0.15f) respawn(p); // very short life
                 break;
+
+            case ParticleType::Sparkle:
+            {
+                // ~0.8s total lifespan (life increments at 0.15/s base → need ~5.3 to reach 0.8)
+                float t = std::min(p.life / 0.12f, 1.0f); // normalize to ~0.8s
+                p.velocity.y -= dt * 2.0f; // slight gravity
+                p.alpha = (1.0f - t) * 0.9f;
+                p.size = (1.0f - t * 0.8f) * 5.0f;
+                // Bright gold → white-ish
+                p.color = glm::vec4(1.0f, 0.85f + t * 0.15f, 0.4f + t * 0.4f, 1.0f);
+                if (t >= 1.0f) p.alpha = 0.0f; // dead
+            }
+                break;
         }
     }
+
+    // Remove dead sparkle particles
+    m_particles.erase(
+        std::remove_if(m_particles.begin(), m_particles.end(),
+            [](const Particle& p) {
+                return p.type == ParticleType::Sparkle && p.life / 0.12f >= 1.0f;
+            }),
+        m_particles.end());
 }
 
 void ParticleSystem::setDepthTexture(GLuint tex, float nearPlane, float farPlane, int screenW, int screenH) {

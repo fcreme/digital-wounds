@@ -155,14 +155,32 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
     }
 
     // Load items from room definition (skip items already in inventory)
-    for (const auto& idef : m_currentRoom.items) {
+    for (int idx = 0; idx < static_cast<int>(m_currentRoom.items.size()); idx++) {
+        const auto& idef = m_currentRoom.items[idx];
         auto item = std::make_unique<WorldItem>();
         item->init(idef.id, idef.name, idef.description, idef.iconPath,
                    idef.position, idef.interactRadius);
-        if (m_inventory.hasItem(idef.id)) {
+        bool alreadyOwned = m_inventory.hasItem(idef.id);
+        if (alreadyOwned) {
             item->setGone();
         }
         m_worldItems.push_back(std::move(item));
+
+        // Create a floating cube prop for the item (visible in-world)
+        if (!alreadyOwned) {
+            auto prop = std::make_unique<PropInstance>();
+            prop->mesh = Mesh::createCube(0.15f);
+            glm::mat4 t(1.0f);
+            t = glm::translate(t, idef.position);
+            t = glm::scale(t, glm::vec3(0.15f));
+            prop->transform = t;
+            prop->materialColor = glm::vec3(0.8f, 0.6f, 0.2f);
+            prop->emissive = glm::vec3(0.4f, 0.3f, 0.1f);
+            prop->roughness = 0.3f;
+            prop->rotationSpeed = 2.0f;
+            prop->itemIndex = idx;
+            m_props.push_back(std::move(prop));
+        }
     }
 
     // Set fog params from room definition
@@ -271,6 +289,9 @@ void Scene::update(float dt, const InputManager& input, Renderer& renderer, Audi
     m_player.update(dt, input, m_camera);
     m_playerMoving = glm::distance(prevPos, m_player.getPosition()) > 0.001f;
 
+    // Update camera shake before camera setup
+    m_camera.updateShake(dt);
+
     // Camera update: FP or fixed
     if (m_currentRoom.firstPerson) {
         float eyeHeight = m_currentRoom.eyeHeight + m_player.getHeadBob();
@@ -348,6 +369,8 @@ void Scene::update(float dt, const InputManager& input, Renderer& renderer, Audi
                            item->getDescription(), item->getIconPath());
         m_pickupMessage = "Picked up: " + item->getName();
         m_pickupMessageTimer = 2.0f;
+        m_pickupFlashTimer = 0.3f;
+        m_particles.spawnBurst(item->getPosition(), 20, ParticleType::Sparkle);
         if (m_audio) {
             m_audio->playSound("pickup", 0.6f);
         }
@@ -358,6 +381,7 @@ void Scene::update(float dt, const InputManager& input, Renderer& renderer, Audi
         if (!bookDef.requiresItem.empty() && !m_inventory.hasItem(bookDef.requiresItem)) {
             m_lockedMessage = bookDef.lockedMessage;
             m_lockedMessageTimer = 2.0f;
+            m_camera.shake(0.05f, 0.2f);
         } else {
             if (!bookDef.requiresItem.empty() && bookDef.consumeItem) {
                 m_inventory.removeItem(bookDef.requiresItem);
@@ -402,6 +426,7 @@ void Scene::update(float dt, const InputManager& input, Renderer& renderer, Audi
     // Decrement message timers
     if (m_lockedMessageTimer > 0.0f) m_lockedMessageTimer -= dt;
     if (m_pickupMessageTimer > 0.0f) m_pickupMessageTimer -= dt;
+    if (m_pickupFlashTimer > 0.0f) m_pickupFlashTimer -= dt;
 
     // After a room load, wait until player leaves all trigger zones before re-arming
     if (m_triggerCooldown > 0.0f) {
@@ -430,6 +455,7 @@ void Scene::update(float dt, const InputManager& input, Renderer& renderer, Audi
                 m_lockedMessage = trigger.lockedMessage;
                 m_lockedMessageTimer = 2.0f;
                 m_triggerCooldown = 1.0f;  // prevent spamming the message
+                m_camera.shake(0.08f, 0.3f);
                 break;
             }
 
@@ -478,7 +504,24 @@ void Scene::renderObjects() {
 
     // Render props
     for (const auto& prop : m_props) {
-        m_meshShader.setMat4("uModel", glm::value_ptr(prop->transform));
+        // Skip item props that are already picked up (Gone)
+        if (prop->itemIndex >= 0 && prop->itemIndex < static_cast<int>(m_worldItems.size())) {
+            if (m_worldItems[prop->itemIndex]->isGone()) continue;
+        }
+
+        // During pickup animation, scale the item prop down
+        glm::mat4 drawTransform = prop->transform;
+        if (prop->itemIndex >= 0 && prop->itemIndex < static_cast<int>(m_worldItems.size())) {
+            float progress = m_worldItems[prop->itemIndex]->getPickupProgress();
+            if (progress > 0.0f) {
+                float shrink = 1.0f - progress;
+                glm::vec3 pos = glm::vec3(drawTransform[3]);
+                drawTransform = glm::translate(glm::mat4(1.0f), pos);
+                drawTransform = glm::scale(drawTransform, glm::vec3(0.15f * shrink));
+            }
+        }
+
+        m_meshShader.setMat4("uModel", glm::value_ptr(drawTransform));
         glm::mat3 normalMatrix = glm::transpose(glm::inverse(glm::mat3(prop->transform)));
         m_meshShader.setMat3("uNormalMatrix", glm::value_ptr(normalMatrix));
 
@@ -539,6 +582,13 @@ void Scene::renderOverlays() {
 }
 
 void Scene::renderUI(UIOverlay& ui, int screenWidth, int screenHeight) {
+    // Pickup flash effect (white overlay fading out)
+    if (m_pickupFlashTimer > 0.0f) {
+        float alpha = m_pickupFlashTimer * 0.5f;  // max 0.15 at start (0.3 * 0.5)
+        ui.drawRect(0.0f, 0.0f, static_cast<float>(screenWidth), static_cast<float>(screenHeight),
+                    glm::vec4(1.0f, 1.0f, 1.0f, alpha));
+    }
+
     // Render inventory UI (on top of everything when open)
     if (m_inventory.isOpen()) {
         m_inventory.renderUI(ui, screenWidth, screenHeight);
