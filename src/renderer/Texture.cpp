@@ -21,7 +21,7 @@ Texture& Texture::operator=(Texture&& other) noexcept {
     return *this;
 }
 
-bool Texture::load(const std::string& path) {
+bool Texture::load(const std::string& path, bool sRGB) {
     destroy();
 
     int channels;
@@ -32,9 +32,10 @@ bool Texture::load(const std::string& path) {
         return false;
     }
 
+    GLenum internalFmt = sRGB ? GL_SRGB8_ALPHA8 : GL_RGBA;
     glGenTextures(1, &m_id);
     glBindTexture(GL_TEXTURE_2D, m_id);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_width, m_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    glTexImage2D(GL_TEXTURE_2D, 0, internalFmt, m_width, m_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
     glGenerateMipmap(GL_TEXTURE_2D);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -46,7 +47,7 @@ bool Texture::load(const std::string& path) {
     return true;
 }
 
-bool Texture::loadFromMemory(const unsigned char* data, int length) {
+bool Texture::loadFromMemory(const unsigned char* data, int length, bool sRGB) {
     destroy();
 
     int channels;
@@ -57,9 +58,10 @@ bool Texture::loadFromMemory(const unsigned char* data, int length) {
         return false;
     }
 
+    GLenum internalFmt = sRGB ? GL_SRGB8_ALPHA8 : GL_RGBA;
     glGenTextures(1, &m_id);
     glBindTexture(GL_TEXTURE_2D, m_id);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_width, m_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+    glTexImage2D(GL_TEXTURE_2D, 0, internalFmt, m_width, m_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
     glGenerateMipmap(GL_TEXTURE_2D);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);

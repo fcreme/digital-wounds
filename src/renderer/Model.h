@@ -22,14 +22,14 @@ public:
     Model& operator=(Model&&) = default;
 
     bool load(const std::string& path);
-    void draw(Shader& shader) const;
+    void draw(Shader& shader, const glm::vec3& tint = glm::vec3(1.0f)) const;
 
 private:
     struct SubMesh {
         Mesh mesh;
         Texture texture;
         Texture normalMap;
-        glm::vec3 baseColor{1.0f};
+        glm::vec3 baseColor{0.5f};
         float roughness = 0.5f;  // 0 = mirror, 1 = matte
         glm::vec3 emissive{0.0f};
     };

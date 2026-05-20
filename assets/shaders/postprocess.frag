@@ -86,7 +86,7 @@ void main() {
     }
 
     // --- Contrast boost (applied globally to avoid 3D/background seam) ---
-    color = (color - 0.5) * 1.15 + 0.5;
+    color = (color - 0.5) * 1.05 + 0.5;
 
     // --- ACES filmic tone mapping ---
     // Preserves highlight rolloff and cinematic contrast from HDR values

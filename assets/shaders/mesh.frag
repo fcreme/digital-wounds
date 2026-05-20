@@ -27,7 +27,7 @@ uniform vec3 uPointLightPos[MAX_POINT_LIGHTS];
 uniform vec3 uPointLightColor[MAX_POINT_LIGHTS];
 uniform float uPointLightRadius[MAX_POINT_LIGHTS];
 
-// Material color (used when no texture)
+// Material color (base color or tint multiplier for textured models)
 uniform vec3 uMaterialColor;
 
 // Camera position for specular
@@ -100,7 +100,7 @@ void main() {
     // Base color
     vec3 baseColor;
     if (uHasTexture) {
-        baseColor = texture(uDiffuse, vTexCoord).rgb;
+        baseColor = texture(uDiffuse, vTexCoord).rgb * uMaterialColor;
     } else {
         baseColor = uMaterialColor;
     }

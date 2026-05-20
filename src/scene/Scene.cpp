@@ -535,7 +535,7 @@ void Scene::renderObjects() {
 
         if (prop->model) {
             glDisable(GL_CULL_FACE);
-            prop->model->draw(m_meshShader);
+            prop->model->draw(m_meshShader, prop->materialColor);
             glEnable(GL_CULL_FACE);
         } else {
             m_meshShader.setVec3("uMaterialColor", prop->materialColor.x, prop->materialColor.y, prop->materialColor.z);

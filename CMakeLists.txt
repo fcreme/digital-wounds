@@ -35,7 +35,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 )
 
 # --- Copy runtime DLLs to build directory ---
-foreach(DLL_NAME SDL2.dll libassimp-6.dll)
+foreach(DLL_NAME SDL2.dll libassimp-6.dll libgcc_s_seh-1.dll libstdc++-6.dll libwinpthread-1.dll zlib1.dll libminizip-1.dll libbz2-1.dll)
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "C:/msys64/mingw64/bin/${DLL_NAME}"

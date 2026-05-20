@@ -51,7 +51,7 @@ bool Model::load(const std::string& path) {
             // Compressed (e.g. PNG/JPG embedded) — mWidth = size in bytes
             if (!embeddedTextures[i].loadFromMemory(
                     reinterpret_cast<const unsigned char*>(aiTex->pcData),
-                    static_cast<int>(aiTex->mWidth))) {
+                    static_cast<int>(aiTex->mWidth), true)) {
                 std::cerr << "Model: failed to load embedded texture " << i << "\n";
             }
         }
@@ -126,7 +126,7 @@ bool Model::load(const std::string& path) {
                     }
                 } else {
                     std::string resolved = resolveTexturePath(modelDir, texPath);
-                    submesh->texture.load(resolved);
+                    submesh->texture.load(resolved, true);
                 }
             }
             // Also try BASE_COLOR texture (glTF PBR)
@@ -142,7 +142,7 @@ bool Model::load(const std::string& path) {
                     }
                 } else {
                     std::string resolved = resolveTexturePath(modelDir, texPath);
-                    submesh->texture.load(resolved);
+                    submesh->texture.load(resolved, true);
                 }
             }
 
@@ -181,18 +181,25 @@ bool Model::load(const std::string& path) {
             }
         }
 
+        std::cout << "  submesh " << mi << ": baseColor=("
+                  << submesh->baseColor.r << ", " << submesh->baseColor.g << ", " << submesh->baseColor.b
+                  << ") tex=" << (submesh->texture.getID() != 0 ? "YES" : "NO")
+                  << " normal=" << (submesh->normalMap.getID() != 0 ? "YES" : "NO")
+                  << " roughness=" << submesh->roughness << "\n";
         m_submeshes.push_back(std::move(submesh));
     }
 
-    std::cout << "Model: loaded '" << path << "' (" << m_submeshes.size() << " submeshes)\n";
+    std::cout << "Model: loaded '" << path << "' (" << m_submeshes.size() << " submeshes, "
+              << scene->mNumTextures << " embedded textures)\n";
     return true;
 }
 
-void Model::draw(Shader& shader) const {
+void Model::draw(Shader& shader, const glm::vec3& tint) const {
     for (const auto& sub : m_submeshes) {
         bool hasTex = sub->texture.getID() != 0;
         shader.setInt("uHasTexture", hasTex ? 1 : 0);
-        shader.setVec3("uMaterialColor", sub->baseColor.x, sub->baseColor.y, sub->baseColor.z);
+        glm::vec3 color = sub->baseColor * tint;
+        shader.setVec3("uMaterialColor", color.x, color.y, color.z);
         shader.setFloat("uRoughness", sub->roughness);
         if (hasTex) {
             sub->texture.bind(GL_TEXTURE0);
