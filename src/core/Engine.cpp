@@ -141,7 +141,8 @@ void Engine::processEvents() {
                 break;
             case SDL_KEYDOWN:
                 m_inputManager->onKeyDown(event.key.keysym.scancode);
-                if (event.key.keysym.sym == SDLK_ESCAPE) m_running = false;
+                if (m_gameState == GameState::TitleScreen && event.key.keysym.sym == SDLK_ESCAPE)
+                    m_running = false;
                 if (m_gameState == GameState::Playing && event.key.keysym.sym == SDLK_F1) {
                     auto& pp = m_renderer->getPostProcess();
                     pp.setSSAODebugView(!pp.getSSAODebugView());
@@ -183,6 +184,7 @@ void Engine::update(float dt) {
             break;
         case GameState::Playing:
             m_scene->update(dt, *m_inputManager, *m_renderer, m_audio.get(), m_ui.get());
+            if (m_scene->wantsQuit()) m_running = false;
             break;
     }
 }

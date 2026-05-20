@@ -61,6 +61,8 @@ public:
     ParticleSystem& getParticleSystem() { return m_particles; }
     const RoomDef& getCurrentRoom() const { return m_currentRoom; }
     void setAudioManager(AudioManager* audio) { m_audio = audio; }
+    bool wantsQuit() const { return m_wantsQuit; }
+    bool isPaused() const { return m_paused; }
 
 private:
     RoomDef m_currentRoom;
@@ -110,6 +112,12 @@ private:
     float m_highlightAmount = 0.0f;  // 0..1 smooth highlight for looked-at book/item
 
     AudioManager* m_audio = nullptr;  // non-owning, set during update
+
+    // Pause menu
+    bool m_paused = false;
+    bool m_wantsQuit = false;
+    int m_pauseSelection = 0;   // 0 = Resume, 1 = Quit
+    float m_pauseAlpha = 0.0f;  // fade-in animation
 
     // Procedural texture generation
     static GLuint generateProceduralArt(int seed, int width, int height);

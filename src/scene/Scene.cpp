@@ -260,6 +260,39 @@ void Scene::update(float dt, const InputManager& input, Renderer& renderer, Audi
     m_transition.update(dt);
     if (m_transition.isActive()) return;
 
+    // Pause menu
+    if (input.isKeyPressed(SDL_SCANCODE_ESCAPE)) {
+        m_paused = !m_paused;
+        m_pauseSelection = 0;
+        if (m_paused) {
+            m_pauseAlpha = 0.0f;
+            SDL_SetRelativeMouseMode(SDL_FALSE);
+        } else {
+            if (m_currentRoom.firstPerson)
+                SDL_SetRelativeMouseMode(SDL_TRUE);
+        }
+        return;
+    }
+    if (m_paused) {
+        m_pauseAlpha = std::min(m_pauseAlpha + dt * 4.0f, 1.0f);
+        if (input.isKeyPressed(SDL_SCANCODE_W) || input.isKeyPressed(SDL_SCANCODE_UP))
+            m_pauseSelection = (m_pauseSelection + 1) % 2;
+        if (input.isKeyPressed(SDL_SCANCODE_S) || input.isKeyPressed(SDL_SCANCODE_DOWN))
+            m_pauseSelection = (m_pauseSelection + 1) % 2;
+        if (input.isKeyPressed(SDL_SCANCODE_RETURN) || input.isKeyPressed(SDL_SCANCODE_E)) {
+            if (m_pauseSelection == 0) {
+                // Resume
+                m_paused = false;
+                if (m_currentRoom.firstPerson)
+                    SDL_SetRelativeMouseMode(SDL_TRUE);
+            } else {
+                // Quit
+                m_wantsQuit = true;
+            }
+        }
+        return;
+    }
+
     // If inventory is open, only update inventory (block player movement)
     if (m_inventory.isOpen()) {
         m_inventory.update(dt, input);
@@ -634,6 +667,56 @@ void Scene::renderUI(UIOverlay& ui, int screenWidth, int screenHeight) {
         float textY = screenHeight * 0.15f;
         ui.drawText(m_pickupMessage, textX, textY, textScale,
                     glm::vec4(0.9f, 0.85f, 0.7f, alpha));
+    }
+
+    // Pause menu overlay
+    if (m_paused) {
+        float a = m_pauseAlpha;
+        float sw = static_cast<float>(screenWidth);
+        float sh = static_cast<float>(screenHeight);
+
+        // Dark overlay
+        ui.drawRect(0.0f, 0.0f, sw, sh, glm::vec4(0.0f, 0.0f, 0.0f, 0.7f * a));
+
+        // Title
+        float titleScale = 3.5f;
+        std::string title = "PAUSED";
+        float titleW = title.length() * 8.0f * titleScale;
+        ui.drawText(title, (sw - titleW) * 0.5f, sh * 0.3f, titleScale,
+                    glm::vec4(0.9f, 0.85f, 0.7f, a));
+
+        // Menu items
+        const char* items[] = { "Resume", "Quit" };
+        float itemScale = 2.5f;
+        float itemY = sh * 0.48f;
+        float itemSpacing = 50.0f;
+
+        for (int i = 0; i < 2; i++) {
+            std::string label = items[i];
+            float labelW = label.length() * 8.0f * itemScale;
+            float x = (sw - labelW) * 0.5f;
+            float y = itemY + i * itemSpacing;
+
+            if (i == m_pauseSelection) {
+                // Selected: highlight bar + bright text
+                float barPad = 12.0f;
+                float barH = 8.0f * itemScale + barPad;
+                ui.drawRect(x - barPad, y - barPad * 0.5f, labelW + barPad * 2.0f, barH,
+                            glm::vec4(0.9f, 0.7f, 0.3f, 0.25f * a));
+                ui.drawText(label, x, y, itemScale,
+                            glm::vec4(1.0f, 0.85f, 0.4f, a));
+            } else {
+                ui.drawText(label, x, y, itemScale,
+                            glm::vec4(0.6f, 0.55f, 0.5f, 0.7f * a));
+            }
+        }
+
+        // Controls hint
+        std::string hint = "W/S: Select   Enter: Confirm   Esc: Resume";
+        float hintScale = 1.5f;
+        float hintW = hint.length() * 8.0f * hintScale;
+        ui.drawText(hint, (sw - hintW) * 0.5f, sh * 0.75f, hintScale,
+                    glm::vec4(0.5f, 0.45f, 0.4f, 0.6f * a));
     }
 }
 
