@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/GameSettings.h"
 #include "scene/Room.h"
 #include "scene/RoomTransition.h"
 #include "renderer/Camera.h"
@@ -114,10 +115,18 @@ private:
     AudioManager* m_audio = nullptr;  // non-owning, set during update
 
     // Pause menu
+    enum class PauseScreen { Main, Settings };
     bool m_paused = false;
     bool m_wantsQuit = false;
-    int m_pauseSelection = 0;   // 0 = Resume, 1 = Quit
+    PauseScreen m_pauseScreen = PauseScreen::Main;
+    int m_pauseSelection = 0;   // 0 = Resume, 1 = Settings, 2 = Quit
     float m_pauseAlpha = 0.0f;  // fade-in animation
+
+    // Settings
+    GameSettings m_settings;
+    int m_settingsSelection = 0; // 0..5 (5 controls + Back)
+    float m_settingsAdjustTimer = 0.0f;
+    void applySettings();
 
     // Procedural texture generation
     static GLuint generateProceduralArt(int seed, int width, int height);

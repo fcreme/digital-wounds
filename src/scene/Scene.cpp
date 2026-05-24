@@ -281,32 +281,112 @@ void Scene::update(float dt, const InputManager& input, Renderer& renderer, Audi
 
     // Pause menu
     if (input.isKeyPressed(SDL_SCANCODE_ESCAPE)) {
-        m_paused = !m_paused;
-        m_pauseSelection = 0;
         if (m_paused) {
+            if (m_pauseScreen == PauseScreen::Settings) {
+                // Back to main pause menu
+                m_pauseScreen = PauseScreen::Main;
+                m_pauseSelection = 1; // highlight Settings
+            } else {
+                // Unpause
+                m_paused = false;
+                if (m_currentRoom.firstPerson)
+                    SDL_SetRelativeMouseMode(SDL_TRUE);
+            }
+        } else {
+            m_paused = true;
+            m_pauseScreen = PauseScreen::Main;
+            m_pauseSelection = 0;
             m_pauseAlpha = 0.0f;
             SDL_SetRelativeMouseMode(SDL_FALSE);
-        } else {
-            if (m_currentRoom.firstPerson)
-                SDL_SetRelativeMouseMode(SDL_TRUE);
         }
         return;
     }
     if (m_paused) {
         m_pauseAlpha = std::min(m_pauseAlpha + dt * 4.0f, 1.0f);
-        if (input.isKeyPressed(SDL_SCANCODE_W) || input.isKeyPressed(SDL_SCANCODE_UP))
-            m_pauseSelection = (m_pauseSelection + 1) % 2;
-        if (input.isKeyPressed(SDL_SCANCODE_S) || input.isKeyPressed(SDL_SCANCODE_DOWN))
-            m_pauseSelection = (m_pauseSelection + 1) % 2;
-        if (input.isKeyPressed(SDL_SCANCODE_RETURN) || input.isKeyPressed(SDL_SCANCODE_E)) {
-            if (m_pauseSelection == 0) {
-                // Resume
-                m_paused = false;
-                if (m_currentRoom.firstPerson)
-                    SDL_SetRelativeMouseMode(SDL_TRUE);
+
+        if (m_pauseScreen == PauseScreen::Main) {
+            // Main pause menu: 3 items (Resume / Settings / Quit)
+            if (input.isKeyPressed(SDL_SCANCODE_W) || input.isKeyPressed(SDL_SCANCODE_UP))
+                m_pauseSelection = (m_pauseSelection + 2) % 3;
+            if (input.isKeyPressed(SDL_SCANCODE_S) || input.isKeyPressed(SDL_SCANCODE_DOWN))
+                m_pauseSelection = (m_pauseSelection + 1) % 3;
+            if (input.isKeyPressed(SDL_SCANCODE_RETURN) || input.isKeyPressed(SDL_SCANCODE_E)) {
+                if (m_pauseSelection == 0) {
+                    m_paused = false;
+                    if (m_currentRoom.firstPerson)
+                        SDL_SetRelativeMouseMode(SDL_TRUE);
+                } else if (m_pauseSelection == 1) {
+                    m_pauseScreen = PauseScreen::Settings;
+                    m_settingsSelection = 0;
+                    m_settingsAdjustTimer = 0.0f;
+                } else {
+                    m_wantsQuit = true;
+                }
+            }
+        } else {
+            // Settings screen: 6 rows (Master/Ambient/SFX/Sensitivity/HeadBob/Back)
+            const int settingsCount = 6;
+            if (input.isKeyPressed(SDL_SCANCODE_W) || input.isKeyPressed(SDL_SCANCODE_UP))
+                m_settingsSelection = (m_settingsSelection + settingsCount - 1) % settingsCount;
+            if (input.isKeyPressed(SDL_SCANCODE_S) || input.isKeyPressed(SDL_SCANCODE_DOWN))
+                m_settingsSelection = (m_settingsSelection + 1) % settingsCount;
+
+            // A/D or Left/Right to adjust values
+            bool leftHeld = input.isKeyDown(SDL_SCANCODE_A) || input.isKeyDown(SDL_SCANCODE_LEFT);
+            bool rightHeld = input.isKeyDown(SDL_SCANCODE_D) || input.isKeyDown(SDL_SCANCODE_RIGHT);
+            bool leftPressed = input.isKeyPressed(SDL_SCANCODE_A) || input.isKeyPressed(SDL_SCANCODE_LEFT);
+            bool rightPressed = input.isKeyPressed(SDL_SCANCODE_D) || input.isKeyPressed(SDL_SCANCODE_RIGHT);
+
+            // Held-key repeat for sliders
+            bool adjust = false;
+            int dir = 0;
+            if (leftPressed || rightPressed) {
+                adjust = true;
+                dir = rightPressed ? 1 : -1;
+                m_settingsAdjustTimer = 0.0f;
+            } else if (leftHeld || rightHeld) {
+                m_settingsAdjustTimer += dt;
+                if (m_settingsAdjustTimer > 0.3f) {
+                    adjust = true;
+                    dir = rightHeld ? 1 : -1;
+                    m_settingsAdjustTimer -= 0.05f; // repeat rate
+                }
             } else {
-                // Quit
-                m_wantsQuit = true;
+                m_settingsAdjustTimer = 0.0f;
+            }
+
+            if (adjust) {
+                float step = 0.05f;
+                switch (m_settingsSelection) {
+                    case 0: // Master Volume
+                        m_settings.masterVolume = std::clamp(m_settings.masterVolume + dir * step, 0.0f, 1.0f);
+                        break;
+                    case 1: // Ambient Volume
+                        m_settings.ambientVolume = std::clamp(m_settings.ambientVolume + dir * step, 0.0f, 1.0f);
+                        break;
+                    case 2: // SFX Volume
+                        m_settings.sfxVolume = std::clamp(m_settings.sfxVolume + dir * step, 0.0f, 1.0f);
+                        break;
+                    case 3: // Sensitivity (discrete: 0/1/2)
+                        if (leftPressed)
+                            m_settings.sensitivityLevel = std::max(0, m_settings.sensitivityLevel - 1);
+                        if (rightPressed)
+                            m_settings.sensitivityLevel = std::min(2, m_settings.sensitivityLevel + 1);
+                        break;
+                    case 4: // Head Bob (toggle)
+                        if (leftPressed || rightPressed)
+                            m_settings.headBobEnabled = !m_settings.headBobEnabled;
+                        break;
+                    default: break;
+                }
+                applySettings();
+            }
+
+            // Enter on Back row (or any confirm on Back)
+            if ((input.isKeyPressed(SDL_SCANCODE_RETURN) || input.isKeyPressed(SDL_SCANCODE_E))
+                && m_settingsSelection == 5) {
+                m_pauseScreen = PauseScreen::Main;
+                m_pauseSelection = 1;
             }
         }
         return;
@@ -710,45 +790,137 @@ void Scene::renderUI(UIOverlay& ui, int screenWidth, int screenHeight) {
         // Dark overlay
         ui.drawRect(0.0f, 0.0f, sw, sh, glm::vec4(0.0f, 0.0f, 0.0f, 0.7f * a));
 
-        // Title
-        float titleScale = 3.5f;
-        std::string title = "PAUSED";
-        float titleW = title.length() * 8.0f * titleScale;
-        ui.drawText(title, (sw - titleW) * 0.5f, sh * 0.3f, titleScale,
-                    glm::vec4(0.9f, 0.85f, 0.7f, a));
+        if (m_pauseScreen == PauseScreen::Main) {
+            // Title
+            float titleScale = 3.5f;
+            std::string title = "PAUSED";
+            float titleW = title.length() * 8.0f * titleScale;
+            ui.drawText(title, (sw - titleW) * 0.5f, sh * 0.3f, titleScale,
+                        glm::vec4(0.9f, 0.85f, 0.7f, a));
 
-        // Menu items
-        const char* items[] = { "Resume", "Quit" };
-        float itemScale = 2.5f;
-        float itemY = sh * 0.48f;
-        float itemSpacing = 50.0f;
+            // Menu items
+            const char* items[] = { "Resume", "Settings", "Quit" };
+            float itemScale = 2.5f;
+            float itemY = sh * 0.45f;
+            float itemSpacing = 50.0f;
 
-        for (int i = 0; i < 2; i++) {
-            std::string label = items[i];
-            float labelW = label.length() * 8.0f * itemScale;
-            float x = (sw - labelW) * 0.5f;
-            float y = itemY + i * itemSpacing;
+            for (int i = 0; i < 3; i++) {
+                std::string label = items[i];
+                float labelW = label.length() * 8.0f * itemScale;
+                float x = (sw - labelW) * 0.5f;
+                float y = itemY + i * itemSpacing;
 
-            if (i == m_pauseSelection) {
-                // Selected: highlight bar + bright text
-                float barPad = 12.0f;
-                float barH = 8.0f * itemScale + barPad;
-                ui.drawRect(x - barPad, y - barPad * 0.5f, labelW + barPad * 2.0f, barH,
-                            glm::vec4(0.9f, 0.7f, 0.3f, 0.25f * a));
-                ui.drawText(label, x, y, itemScale,
-                            glm::vec4(1.0f, 0.85f, 0.4f, a));
-            } else {
-                ui.drawText(label, x, y, itemScale,
-                            glm::vec4(0.6f, 0.55f, 0.5f, 0.7f * a));
+                if (i == m_pauseSelection) {
+                    float barPad = 12.0f;
+                    float barH = 8.0f * itemScale + barPad;
+                    ui.drawRect(x - barPad, y - barPad * 0.5f, labelW + barPad * 2.0f, barH,
+                                glm::vec4(0.9f, 0.7f, 0.3f, 0.25f * a));
+                    ui.drawText(label, x, y, itemScale,
+                                glm::vec4(1.0f, 0.85f, 0.4f, a));
+                } else {
+                    ui.drawText(label, x, y, itemScale,
+                                glm::vec4(0.6f, 0.55f, 0.5f, 0.7f * a));
+                }
             }
-        }
 
-        // Controls hint
-        std::string hint = "W/S: Select   Enter: Confirm   Esc: Resume";
-        float hintScale = 1.5f;
-        float hintW = hint.length() * 8.0f * hintScale;
-        ui.drawText(hint, (sw - hintW) * 0.5f, sh * 0.75f, hintScale,
-                    glm::vec4(0.5f, 0.45f, 0.4f, 0.6f * a));
+            // Controls hint
+            std::string hint = "W/S: Select   Enter: Confirm   Esc: Resume";
+            float hintScale = 1.5f;
+            float hintW = hint.length() * 8.0f * hintScale;
+            ui.drawText(hint, (sw - hintW) * 0.5f, sh * 0.78f, hintScale,
+                        glm::vec4(0.5f, 0.45f, 0.4f, 0.6f * a));
+
+        } else {
+            // Settings screen
+            float titleScale = 3.5f;
+            std::string title = "SETTINGS";
+            float titleW = title.length() * 8.0f * titleScale;
+            ui.drawText(title, (sw - titleW) * 0.5f, sh * 0.15f, titleScale,
+                        glm::vec4(0.9f, 0.85f, 0.7f, a));
+
+            float rowScale = 2.0f;
+            float rowY = sh * 0.3f;
+            float rowSpacing = 45.0f;
+            float labelX = sw * 0.15f;
+            float valueX = sw * 0.55f;
+            float sliderW = sw * 0.25f;
+            float sliderH = 8.0f * rowScale;
+            float barPad = 10.0f;
+
+            // Helper: row labels and values
+            struct SettingsRow {
+                std::string label;
+                std::string value;
+                float sliderFill; // -1 = not a slider
+            };
+
+            // Format percentage
+            auto pct = [](float v) -> std::string {
+                int p = static_cast<int>(v * 100.0f + 0.5f);
+                return std::to_string(p) + "%";
+            };
+
+            const char* sensLabels[] = { "< Low >", "< Med >", "< High >" };
+            SettingsRow rows[] = {
+                { "Master Volume",     pct(m_settings.masterVolume),   m_settings.masterVolume },
+                { "Ambient Volume",    pct(m_settings.ambientVolume),  m_settings.ambientVolume },
+                { "SFX Volume",        pct(m_settings.sfxVolume),      m_settings.sfxVolume },
+                { "Mouse Sensitivity", sensLabels[m_settings.sensitivityLevel], -1.0f },
+                { "Head Bob",          m_settings.headBobEnabled ? "< On >" : "< Off >", -1.0f },
+                { "Back",              "",                             -1.0f },
+            };
+
+            for (int i = 0; i < 6; i++) {
+                float y = rowY + i * rowSpacing;
+                bool selected = (i == m_settingsSelection);
+
+                glm::vec4 textColor = selected
+                    ? glm::vec4(1.0f, 0.85f, 0.4f, a)
+                    : glm::vec4(0.6f, 0.55f, 0.5f, 0.7f * a);
+
+                // Highlight bar for selected row
+                if (selected) {
+                    float fullW = sw * 0.72f;
+                    ui.drawRect(labelX - barPad, y - barPad * 0.5f, fullW, sliderH + barPad,
+                                glm::vec4(0.9f, 0.7f, 0.3f, 0.2f * a));
+                }
+
+                // Label
+                if (i == 5) {
+                    // Center "Back"
+                    float backW = rows[i].label.length() * 8.0f * rowScale;
+                    ui.drawText(rows[i].label, (sw - backW) * 0.5f, y, rowScale, textColor);
+                } else {
+                    ui.drawText(rows[i].label, labelX, y, rowScale, textColor);
+                }
+
+                // Value: slider or discrete text
+                if (rows[i].sliderFill >= 0.0f) {
+                    // Dark track
+                    ui.drawRect(valueX, y, sliderW, sliderH,
+                                glm::vec4(0.15f, 0.12f, 0.1f, 0.8f * a));
+                    // Gold fill
+                    float fillW = sliderW * rows[i].sliderFill;
+                    if (fillW > 0.0f) {
+                        ui.drawRect(valueX, y, fillW, sliderH,
+                                    glm::vec4(0.9f, 0.7f, 0.3f, 0.7f * a));
+                    }
+                    // Percentage text
+                    float pctX = valueX + sliderW + 12.0f;
+                    ui.drawText(rows[i].value, pctX, y, rowScale, textColor);
+                } else if (i < 5) {
+                    // Discrete value
+                    ui.drawText(rows[i].value, valueX, y, rowScale, textColor);
+                }
+            }
+
+            // Controls hint
+            std::string hint = "W/S: Select   A/D: Adjust   Esc: Back";
+            float hintScale = 1.5f;
+            float hintW = hint.length() * 8.0f * hintScale;
+            ui.drawText(hint, (sw - hintW) * 0.5f, sh * 0.85f, hintScale,
+                        glm::vec4(0.5f, 0.45f, 0.4f, 0.6f * a));
+        }
     }
 }
 
@@ -858,6 +1030,17 @@ GLuint Scene::generateProceduralArt(int seed, int width, int height) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
     return tex;
+}
+
+void Scene::applySettings() {
+    if (m_audio) {
+        m_audio->setMasterVolume(m_settings.masterVolume);
+        m_audio->setAmbientVolume(m_settings.ambientVolume);
+        m_audio->setSfxVolume(m_settings.sfxVolume);
+    }
+    constexpr float sensValues[] = { 0.0008f, 0.0015f, 0.003f };
+    m_player.setMouseSensitivity(sensValues[m_settings.sensitivityLevel]);
+    m_player.setHeadBobEnabled(m_settings.headBobEnabled);
 }
 
 void Scene::shutdown() {

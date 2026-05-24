@@ -456,6 +456,8 @@ bool AudioManager::loadAmbient(const std::string& path) {
 void AudioManager::playAmbient() { m_ambientPlaying = true; }
 void AudioManager::stopAmbient() { m_ambientPlaying = false; }
 void AudioManager::setAmbientVolume(float vol) { m_ambientVolume = std::clamp(vol, 0.0f, 1.0f); }
+void AudioManager::setMasterVolume(float vol) { m_masterVolume = std::clamp(vol, 0.0f, 1.0f); }
+void AudioManager::setSfxVolume(float vol) { m_sfxVolume = std::clamp(vol, 0.0f, 1.0f); }
 
 void AudioManager::playFootstep() {
     static std::mt19937 rng(std::random_device{}());
@@ -539,13 +541,13 @@ void AudioManager::mixAudio(Uint8* stream, int len) {
                     float endVal = static_cast<float>(endSrc[s]);
                     float startVal = (startIdx < bufSize / sizeof(Sint16)) ? static_cast<float>(startSrc[startIdx]) : 0.0f;
                     float blended = endVal * (1.0f - fade) + startVal * fade;
-                    float vol = m_ambientVolume;
+                    float vol = m_ambientVolume * m_masterVolume;
                     int mixed = static_cast<int>(dst[s]) + static_cast<int>(blended * vol);
                     dst[s] = static_cast<Sint16>(std::clamp(mixed, -32768, 32767));
                 }
             } else {
                 SDL_MixAudioFormat(stream + offset, m_ambientBuffer.data() + m_ambientPos,
-                                   m_spec.format, toMix, static_cast<int>(m_ambientVolume * SDL_MIX_MAXVOLUME));
+                                   m_spec.format, toMix, static_cast<int>(m_ambientVolume * m_masterVolume * SDL_MIX_MAXVOLUME));
             }
 
             m_ambientPos += toMix;
@@ -579,9 +581,9 @@ void AudioManager::mixAudio(Uint8* stream, int len) {
                 float s1 = static_cast<float>(src[idx1 * m_spec.channels + c]);
                 float sample = s0 + (s1 - s0) * frac;
 
-                // Apply volume (L/R)
+                // Apply volume (L/R) scaled by SFX and master volume
                 float vol = (c == 0) ? it->volumeL : it->volumeR;
-                sample *= vol;
+                sample *= vol * m_sfxVolume * m_masterVolume;
 
                 // Mix into output
                 int mixed = static_cast<int>(dst[f * m_spec.channels + c]) + static_cast<int>(sample);

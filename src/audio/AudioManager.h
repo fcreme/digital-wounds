@@ -34,6 +34,10 @@ public:
     void stopAmbient();
     void setAmbientVolume(float vol); // 0..1
 
+    // Master and SFX volume controls
+    void setMasterVolume(float vol);
+    void setSfxVolume(float vol);
+
     // Footsteps
     void generateFootstepSound();  // procedural soft stone footstep
     void generateFootstepSound2(); // second variant for alternation
@@ -71,6 +75,10 @@ private:
     size_t m_ambientPos = 0;
     bool m_ambientPlaying = false;
     float m_ambientVolume = 0.3f;
+
+    // Master / SFX volume
+    float m_masterVolume = 1.0f;
+    float m_sfxVolume = 1.0f;
 
     // One-shot playback tracking
     struct PlayingSound {

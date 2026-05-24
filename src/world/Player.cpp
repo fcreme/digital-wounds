@@ -22,8 +22,8 @@ void Player::update(float dt, const InputManager& input, const Camera& camera) {
     (void)camera;
 
     // Mouse look (negate X so moving mouse right turns camera right)
-    m_rotation -= input.getMouseDeltaX() * MOUSE_SENSITIVITY;
-    m_pitch -= input.getMouseDeltaY() * MOUSE_SENSITIVITY;
+    m_rotation -= input.getMouseDeltaX() * m_mouseSensitivity;
+    m_pitch -= input.getMouseDeltaY() * m_mouseSensitivity;
     m_pitch = std::clamp(m_pitch, -MAX_PITCH, MAX_PITCH);
 
     // Smooth mouse interpolation
@@ -78,7 +78,7 @@ void Player::update(float dt, const InputManager& input, const Camera& camera) {
     if (isMoving) {
         float speedRatio = (moveLen / dt) / m_moveSpeed; // normalized to max speed
         m_headBobTime += dt * std::min(speedRatio, 1.0f);
-        m_headBobOffset = std::sin(m_headBobTime * HEAD_BOB_FREQ) * HEAD_BOB_AMP;
+        m_headBobOffset = std::sin(m_headBobTime * HEAD_BOB_FREQ) * m_headBobAmp;
     } else {
         // Smoothly return to zero (frame-rate independent)
         m_headBobOffset *= std::exp(-dt * 8.0f);

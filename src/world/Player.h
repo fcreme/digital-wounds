@@ -31,6 +31,10 @@ public:
     // Head bob offset (vertical, only when moving)
     float getHeadBob() const { return m_headBobOffset; }
 
+    // Settings
+    void setMouseSensitivity(float s) { m_mouseSensitivity = s; }
+    void setHeadBobEnabled(bool enabled) { m_headBobAmp = enabled ? 0.03f : 0.0f; }
+
     // Forward look direction from yaw/pitch
     glm::vec3 getLookDirection() const;
 
@@ -46,7 +50,7 @@ private:
     float m_moveSpeed = 7.0f;
     float m_rotSpeed = 3.0f;
 
-    static constexpr float MOUSE_SENSITIVITY = 0.0015f;
+    float m_mouseSensitivity = 0.0015f;
     static constexpr float MAX_PITCH = 1.4835f; // ~85 degrees
 
     // Smooth mouse
@@ -57,7 +61,7 @@ private:
     float m_headBobTime = 0.0f;
     float m_headBobOffset = 0.0f;
     static constexpr float HEAD_BOB_FREQ = 8.0f;
-    static constexpr float HEAD_BOB_AMP = 0.03f;
+    float m_headBobAmp = 0.03f;
 
     // World bounds
     float m_boundsMinX = -10.0f;
