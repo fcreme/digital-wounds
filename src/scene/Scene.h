@@ -62,6 +62,7 @@ public:
     ParticleSystem& getParticleSystem() { return m_particles; }
     const RoomDef& getCurrentRoom() const { return m_currentRoom; }
     void setAudioManager(AudioManager* audio) { m_audio = audio; }
+    void setSettings(const GameSettings& s);
     bool wantsQuit() const { return m_wantsQuit; }
     bool isPaused() const { return m_paused; }
 

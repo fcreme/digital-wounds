@@ -91,6 +91,14 @@ bool Engine::init(const std::string& title, int width, int height) {
         m_audio->generateInventoryOpenSound();
     }
 
+    // Load persisted settings (keeps defaults if file missing or malformed)
+    loadSettings("settings.json", m_settings);
+    if (m_audio) {
+        m_audio->setMasterVolume(m_settings.masterVolume);
+        m_audio->setAmbientVolume(m_settings.ambientVolume);
+        m_audio->setSfxVolume(m_settings.sfxVolume);
+    }
+
     // Renderer
     m_renderer = std::make_unique<Renderer>();
     if (!m_renderer->init(m_windowWidth, m_windowHeight)) {
@@ -267,6 +275,7 @@ void Engine::startGame() {
     }
 
     m_scene->setAudioManager(m_audio.get());
+    m_scene->setSettings(m_settings);
     m_scene->loadRoom("assets/rooms/hallway.json", *m_renderer);
 
     m_gameState = GameState::Playing;

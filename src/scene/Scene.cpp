@@ -1032,6 +1032,11 @@ GLuint Scene::generateProceduralArt(int seed, int width, int height) {
     return tex;
 }
 
+void Scene::setSettings(const GameSettings& s) {
+    m_settings = s;
+    applySettings();
+}
+
 void Scene::applySettings() {
     if (m_audio) {
         m_audio->setMasterVolume(m_settings.masterVolume);
@@ -1041,6 +1046,7 @@ void Scene::applySettings() {
     constexpr float sensValues[] = { 0.0008f, 0.0015f, 0.003f };
     m_player.setMouseSensitivity(sensValues[m_settings.sensitivityLevel]);
     m_player.setHeadBobEnabled(m_settings.headBobEnabled);
+    saveSettings("settings.json", m_settings);
 }
 
 void Scene::shutdown() {

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "core/GameSettings.h"
+
 #include <SDL.h>
 #include <string>
 #include <memory>
@@ -59,6 +61,8 @@ private:
     bool m_running = false;
     float m_deltaTime = 0.0f;
     float m_totalTime = 0.0f;
+
+    GameSettings m_settings;
 };
 
 } // namespace dw
