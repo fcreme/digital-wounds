@@ -7,6 +7,19 @@
 
 namespace dw {
 
+struct PostProcessParams {
+    float bloomThreshold = 1.2f;
+    float bloomIntensity = 0.35f;
+    float caStrength = 0.006f;
+    float vignetteOuter = 0.85f;
+    float vignetteInner = 0.3f;
+    float vignetteDarkness = 0.65f;
+    float desaturation = 0.15f;
+    glm::vec3 colorTint{0.92f, 0.96f, 1.08f};
+    float contrast = 1.05f;
+    float grainStrength = 0.03f;
+};
+
 class PostProcess {
 public:
     PostProcess() = default;
@@ -20,6 +33,9 @@ public:
 
     // Distance fog parameters
     void setFogParams(const glm::vec3& color, float start, float end, float nearPlane, float farPlane);
+
+    // Per-room post-process parameters
+    void setPostProcessParams(const PostProcessParams& params) { m_ppParams = params; }
 
     // SSAO toggle
     void setSSAOEnabled(bool enabled) { m_ssaoEnabled = enabled; }
@@ -90,6 +106,9 @@ private:
     float m_nearPlane = 0.1f;
     float m_farPlane = 100.0f;
     bool m_fogEnabled = false;
+
+    // Per-room post-process params
+    PostProcessParams m_ppParams;
 
     int m_width = 1280;
     int m_height = 720;

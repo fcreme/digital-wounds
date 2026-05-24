@@ -47,6 +47,7 @@ public:
     bool isOpen() const { return m_state != BookState::Closed; }
 
     const glm::vec3& getPosition() const { return m_worldPos; }
+    int getCurrentPage() const { return m_currentPage; }
 
     // Open/close
     void open();

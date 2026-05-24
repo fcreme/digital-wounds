@@ -155,8 +155,8 @@ void FMVOverlay::render() {
 
 GLuint FMVOverlay::generateProceduralTexture(const std::string& type, int frameCount) {
     frameCount = std::max(1, frameCount);
-    int frameW = 128;
-    int frameH = 128;
+    int frameW = 256;
+    int frameH = 256;
     int totalW = frameW * frameCount;
 
     std::vector<unsigned char> pixels(totalW * frameH * 4, 0);

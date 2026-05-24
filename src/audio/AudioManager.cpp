@@ -162,6 +162,208 @@ void AudioManager::generatePickupSound() {
     std::cout << "AudioManager: generated procedural pickup chime (" << numFrames << " frames)\n";
 }
 
+void AudioManager::generateFootstepSound2() {
+    const int sampleRate = m_spec.freq;
+    const int channels = m_spec.channels;
+    const float duration = 0.1f;
+    const int numFrames = static_cast<int>(sampleRate * duration);
+
+    std::mt19937 rng(std::random_device{}());
+    std::uniform_real_distribution<float> noiseDist(-1.0f, 1.0f);
+
+    std::vector<float> mono(numFrames);
+    for (int i = 0; i < numFrames; i++) {
+        float t = static_cast<float>(i) / sampleRate;
+        float thud = std::sin(2.0f * static_cast<float>(M_PI) * 80.0f * t) * std::exp(-t * 35.0f);
+        float noise = noiseDist(rng) * std::exp(-t * 50.0f) * 0.45f;
+        mono[i] = (thud + noise) * 0.7f;
+    }
+
+    SoundData sound;
+    sound.spec = m_spec;
+    sound.buffer.resize(numFrames * channels * sizeof(Sint16));
+    Sint16* out = reinterpret_cast<Sint16*>(sound.buffer.data());
+    for (int i = 0; i < numFrames; i++) {
+        Sint16 sample = static_cast<Sint16>(std::clamp(mono[i] * 32767.0f, -32768.0f, 32767.0f));
+        for (int c = 0; c < channels; c++) {
+            out[i * channels + c] = sample;
+        }
+    }
+
+    m_sounds["footstep2"] = std::move(sound);
+    std::cout << "AudioManager: generated procedural footstep2 (" << numFrames << " frames)\n";
+}
+
+void AudioManager::generateDoorOpenSound() {
+    const int sampleRate = m_spec.freq;
+    const int channels = m_spec.channels;
+    const float duration = 0.4f;
+    const int numFrames = static_cast<int>(sampleRate * duration);
+
+    std::mt19937 rng(std::random_device{}());
+    std::uniform_real_distribution<float> noiseDist(-1.0f, 1.0f);
+
+    std::vector<float> mono(numFrames);
+    for (int i = 0; i < numFrames; i++) {
+        float t = static_cast<float>(i) / sampleRate;
+        // Descending frequency sweep 60Hz -> 40Hz
+        float freq = 60.0f - t * 50.0f;
+        float sweep = std::sin(2.0f * static_cast<float>(M_PI) * freq * t) * std::exp(-t * 6.0f);
+        // Noise burst for texture
+        float noise = noiseDist(rng) * std::exp(-t * 12.0f) * 0.3f;
+        mono[i] = (sweep + noise) * 0.6f;
+    }
+
+    SoundData sound;
+    sound.spec = m_spec;
+    sound.buffer.resize(numFrames * channels * sizeof(Sint16));
+    Sint16* out = reinterpret_cast<Sint16*>(sound.buffer.data());
+    for (int i = 0; i < numFrames; i++) {
+        Sint16 sample = static_cast<Sint16>(std::clamp(mono[i] * 32767.0f, -32768.0f, 32767.0f));
+        for (int c = 0; c < channels; c++) {
+            out[i * channels + c] = sample;
+        }
+    }
+
+    m_sounds["door_open"] = std::move(sound);
+    std::cout << "AudioManager: generated procedural door_open (" << numFrames << " frames)\n";
+}
+
+void AudioManager::generateLockedSound() {
+    const int sampleRate = m_spec.freq;
+    const int channels = m_spec.channels;
+    const float duration = 0.25f;
+    const int numFrames = static_cast<int>(sampleRate * duration);
+
+    std::vector<float> mono(numFrames);
+    for (int i = 0; i < numFrames; i++) {
+        float t = static_cast<float>(i) / sampleRate;
+        // Two quick low thuds
+        float thud1 = std::sin(2.0f * static_cast<float>(M_PI) * 70.0f * t) * std::exp(-t * 30.0f);
+        float thud2 = 0.0f;
+        if (t > 0.1f) {
+            float t2 = t - 0.1f;
+            thud2 = std::sin(2.0f * static_cast<float>(M_PI) * 60.0f * t2) * std::exp(-t2 * 35.0f) * 0.8f;
+        }
+        mono[i] = (thud1 + thud2) * 0.7f;
+    }
+
+    SoundData sound;
+    sound.spec = m_spec;
+    sound.buffer.resize(numFrames * channels * sizeof(Sint16));
+    Sint16* out = reinterpret_cast<Sint16*>(sound.buffer.data());
+    for (int i = 0; i < numFrames; i++) {
+        Sint16 sample = static_cast<Sint16>(std::clamp(mono[i] * 32767.0f, -32768.0f, 32767.0f));
+        for (int c = 0; c < channels; c++) {
+            out[i * channels + c] = sample;
+        }
+    }
+
+    m_sounds["locked"] = std::move(sound);
+    std::cout << "AudioManager: generated procedural locked (" << numFrames << " frames)\n";
+}
+
+void AudioManager::generateBookOpenSound() {
+    const int sampleRate = m_spec.freq;
+    const int channels = m_spec.channels;
+    const float duration = 0.15f;
+    const int numFrames = static_cast<int>(sampleRate * duration);
+
+    std::mt19937 rng(std::random_device{}());
+    std::uniform_real_distribution<float> noiseDist(-1.0f, 1.0f);
+
+    std::vector<float> mono(numFrames);
+    for (int i = 0; i < numFrames; i++) {
+        float t = static_cast<float>(i) / sampleRate;
+        // Soft filtered noise burst (paper rustle)
+        float noise = noiseDist(rng);
+        // Simple low-pass via exponential decay shaping
+        float env = std::exp(-t * 25.0f);
+        // Mix with gentle sine for body
+        float body = std::sin(2.0f * static_cast<float>(M_PI) * 200.0f * t) * 0.15f * env;
+        mono[i] = (noise * 0.4f * env + body) * 0.5f;
+    }
+
+    SoundData sound;
+    sound.spec = m_spec;
+    sound.buffer.resize(numFrames * channels * sizeof(Sint16));
+    Sint16* out = reinterpret_cast<Sint16*>(sound.buffer.data());
+    for (int i = 0; i < numFrames; i++) {
+        Sint16 sample = static_cast<Sint16>(std::clamp(mono[i] * 32767.0f, -32768.0f, 32767.0f));
+        for (int c = 0; c < channels; c++) {
+            out[i * channels + c] = sample;
+        }
+    }
+
+    m_sounds["book_open"] = std::move(sound);
+    std::cout << "AudioManager: generated procedural book_open (" << numFrames << " frames)\n";
+}
+
+void AudioManager::generatePageTurnSound() {
+    const int sampleRate = m_spec.freq;
+    const int channels = m_spec.channels;
+    const float duration = 0.1f;
+    const int numFrames = static_cast<int>(sampleRate * duration);
+
+    std::mt19937 rng(std::random_device{}());
+    std::uniform_real_distribution<float> noiseDist(-1.0f, 1.0f);
+
+    std::vector<float> mono(numFrames);
+    for (int i = 0; i < numFrames; i++) {
+        float t = static_cast<float>(i) / sampleRate;
+        // Quick high-frequency rustle
+        float noise = noiseDist(rng);
+        float env = std::exp(-t * 40.0f);
+        // Higher frequency content for crispness
+        float hi = std::sin(2.0f * static_cast<float>(M_PI) * 3000.0f * t) * 0.1f * env;
+        mono[i] = (noise * 0.3f * env + hi) * 0.4f;
+    }
+
+    SoundData sound;
+    sound.spec = m_spec;
+    sound.buffer.resize(numFrames * channels * sizeof(Sint16));
+    Sint16* out = reinterpret_cast<Sint16*>(sound.buffer.data());
+    for (int i = 0; i < numFrames; i++) {
+        Sint16 sample = static_cast<Sint16>(std::clamp(mono[i] * 32767.0f, -32768.0f, 32767.0f));
+        for (int c = 0; c < channels; c++) {
+            out[i * channels + c] = sample;
+        }
+    }
+
+    m_sounds["page_turn"] = std::move(sound);
+    std::cout << "AudioManager: generated procedural page_turn (" << numFrames << " frames)\n";
+}
+
+void AudioManager::generateInventoryOpenSound() {
+    const int sampleRate = m_spec.freq;
+    const int channels = m_spec.channels;
+    const float duration = 0.12f;
+    const int numFrames = static_cast<int>(sampleRate * duration);
+
+    std::vector<float> mono(numFrames);
+    for (int i = 0; i < numFrames; i++) {
+        float t = static_cast<float>(i) / sampleRate;
+        // Soft 800Hz sine chime
+        float env = std::exp(-t * 20.0f);
+        float tone = std::sin(2.0f * static_cast<float>(M_PI) * 800.0f * t) * env;
+        mono[i] = tone * 0.35f;
+    }
+
+    SoundData sound;
+    sound.spec = m_spec;
+    sound.buffer.resize(numFrames * channels * sizeof(Sint16));
+    Sint16* out = reinterpret_cast<Sint16*>(sound.buffer.data());
+    for (int i = 0; i < numFrames; i++) {
+        Sint16 sample = static_cast<Sint16>(std::clamp(mono[i] * 32767.0f, -32768.0f, 32767.0f));
+        for (int c = 0; c < channels; c++) {
+            out[i * channels + c] = sample;
+        }
+    }
+
+    m_sounds["inventory_open"] = std::move(sound);
+    std::cout << "AudioManager: generated procedural inventory_open (" << numFrames << " frames)\n";
+}
+
 void AudioManager::playSound(const std::string& name, float volume, float pitch) {
     auto it = m_sounds.find(name);
     if (it == m_sounds.end()) return;
@@ -262,7 +464,9 @@ void AudioManager::playFootstep() {
 
     float vol = volDist(rng);
     float pitch = pitchDist(rng);
-    playSound("footstep", vol, pitch);
+    const std::string& name = m_footstepAlternate ? "footstep2" : "footstep";
+    m_footstepAlternate = !m_footstepAlternate;
+    playSound(name, vol, pitch);
 }
 
 void AudioManager::updateFootsteps(float dt, bool isMoving) {
@@ -305,20 +509,50 @@ void AudioManager::audioCallback(void* userdata, Uint8* stream, int len) {
 void AudioManager::mixAudio(Uint8* stream, int len) {
     std::memset(stream, 0, len);
 
-    // Mix ambient loop
+    // Mix ambient loop with crossfade at loop boundary
     if (m_ambientPlaying && !m_ambientBuffer.empty()) {
+        const size_t bufSize = m_ambientBuffer.size();
+        // Crossfade region: ~4096 stereo samples worth of bytes
+        const size_t crossfadeBytes = std::min(static_cast<size_t>(4096 * m_spec.channels * sizeof(Sint16)), bufSize / 4);
+        const size_t crossfadeStart = bufSize - crossfadeBytes;
+
         int remaining = len;
         int offset = 0;
         while (remaining > 0) {
-            int available = static_cast<int>(m_ambientBuffer.size() - m_ambientPos);
+            int available = static_cast<int>(bufSize - m_ambientPos);
             int toMix = std::min(remaining, available);
-            SDL_MixAudioFormat(stream + offset, m_ambientBuffer.data() + m_ambientPos,
-                               m_spec.format, toMix, static_cast<int>(m_ambientVolume * SDL_MIX_MAXVOLUME));
+
+            // Check if we're in the crossfade region near the end
+            if (m_ambientPos >= crossfadeStart) {
+                // Manual mix with crossfade: blend end of buffer with beginning
+                const Sint16* endSrc = reinterpret_cast<const Sint16*>(m_ambientBuffer.data() + m_ambientPos);
+                const Sint16* startSrc = reinterpret_cast<const Sint16*>(m_ambientBuffer.data());
+                Sint16* dst = reinterpret_cast<Sint16*>(stream + offset);
+                int samplesToMix = toMix / static_cast<int>(sizeof(Sint16));
+
+                for (int s = 0; s < samplesToMix; s++) {
+                    size_t posInCrossfade = (m_ambientPos - crossfadeStart) + s * sizeof(Sint16);
+                    float fade = static_cast<float>(posInCrossfade) / static_cast<float>(crossfadeBytes);
+                    fade = std::clamp(fade, 0.0f, 1.0f);
+
+                    size_t startIdx = s;
+                    float endVal = static_cast<float>(endSrc[s]);
+                    float startVal = (startIdx < bufSize / sizeof(Sint16)) ? static_cast<float>(startSrc[startIdx]) : 0.0f;
+                    float blended = endVal * (1.0f - fade) + startVal * fade;
+                    float vol = m_ambientVolume;
+                    int mixed = static_cast<int>(dst[s]) + static_cast<int>(blended * vol);
+                    dst[s] = static_cast<Sint16>(std::clamp(mixed, -32768, 32767));
+                }
+            } else {
+                SDL_MixAudioFormat(stream + offset, m_ambientBuffer.data() + m_ambientPos,
+                                   m_spec.format, toMix, static_cast<int>(m_ambientVolume * SDL_MIX_MAXVOLUME));
+            }
+
             m_ambientPos += toMix;
             offset += toMix;
             remaining -= toMix;
-            if (m_ambientPos >= m_ambientBuffer.size()) {
-                m_ambientPos = 0; // loop
+            if (m_ambientPos >= bufSize) {
+                m_ambientPos = 0; // loop (crossfade handled above)
             }
         }
     }

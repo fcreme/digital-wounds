@@ -175,9 +175,17 @@ void ParticleSystem::update(float dt) {
                 // Pulsing glow
                 p.alpha = std::max(0.0f, std::sin(m_time * 3.0f + p.phaseOffset) * 0.5f + 0.3f);
                 p.size = 4.0f + std::sin(m_time * 2.5f + p.phaseOffset) * 2.0f;
-                // Keep in bounds
-                if (glm::distance(p.position, p.origin) > glm::length(p.area)) {
-                    p.velocity = (p.origin - p.position) * 0.5f;
+                // Keep in bounds — gradual steering instead of hard reset
+                {
+                    float boundaryDist = glm::length(p.area);
+                    float dist = glm::distance(p.position, p.origin);
+                    float ratio = dist / std::max(boundaryDist, 0.001f);
+                    if (ratio > 0.7f) {
+                        float urgency = (ratio - 0.7f) / 0.3f; // 0..1 from 70% to 100%
+                        urgency = urgency * urgency; // quadratic ramp
+                        glm::vec3 steer = (p.origin - p.position) * urgency * 2.0f;
+                        p.velocity += steer * dt;
+                    }
                 }
                 break;
 
@@ -189,7 +197,7 @@ void ParticleSystem::update(float dt) {
                 p.velocity.z += randRange(-2.0f, 2.0f) * dt;
                 // Fade out as it rises, shrink
                 {
-                    float t = std::min(p.life * 6.6f, 1.0f); // normalize to ~1s lifespan
+                    float t = std::min(p.life / 0.15f, 1.0f); // normalize using actual respawn threshold
                     p.alpha = (1.0f - t) * 0.8f;
                     p.size = (1.0f - t * 0.7f) * 6.0f;
                     // Color shift: yellow-orange at birth → red-dark at death

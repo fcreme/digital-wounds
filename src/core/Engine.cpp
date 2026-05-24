@@ -82,7 +82,13 @@ bool Engine::init(const std::string& title, int width, int height) {
     } else {
         // Generate procedural sounds
         m_audio->generateFootstepSound();
+        m_audio->generateFootstepSound2();
         m_audio->generatePickupSound();
+        m_audio->generateDoorOpenSound();
+        m_audio->generateLockedSound();
+        m_audio->generateBookOpenSound();
+        m_audio->generatePageTurnSound();
+        m_audio->generateInventoryOpenSound();
     }
 
     // Renderer

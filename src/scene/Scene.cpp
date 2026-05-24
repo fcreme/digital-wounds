@@ -2,6 +2,7 @@
 #include "renderer/Renderer.h"
 #include "renderer/BackgroundLayer.h"
 #include "renderer/ShadowMap.h"
+#include "fx/PostProcess.h"
 #include "core/InputManager.h"
 #include "audio/AudioManager.h"
 #include "ui/UIOverlay.h"
@@ -193,6 +194,24 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
             m_currentRoom.fogParams.far);
     }
 
+    // Apply per-room post-process parameters (or reset to defaults)
+    {
+        PostProcessParams params;
+        if (m_currentRoom.postProcess.defined) {
+            params.bloomThreshold = m_currentRoom.postProcess.bloomThreshold;
+            params.bloomIntensity = m_currentRoom.postProcess.bloomIntensity;
+            params.caStrength = m_currentRoom.postProcess.caStrength;
+            params.vignetteOuter = m_currentRoom.postProcess.vignetteOuter;
+            params.vignetteInner = m_currentRoom.postProcess.vignetteInner;
+            params.vignetteDarkness = m_currentRoom.postProcess.vignetteDarkness;
+            params.desaturation = m_currentRoom.postProcess.desaturation;
+            params.colorTint = m_currentRoom.postProcess.colorTint;
+            params.contrast = m_currentRoom.postProcess.contrast;
+            params.grainStrength = m_currentRoom.postProcess.grainStrength;
+        }
+        renderer.getPostProcess().setPostProcessParams(params);
+    }
+
     // Spawn particle emitters from room JSON
     for (const auto& pdef : m_currentRoom.particles) {
         ParticleEmitter e;
@@ -299,14 +318,21 @@ void Scene::update(float dt, const InputManager& input, Renderer& renderer, Audi
         // Tab to close is handled inside inventory, but also check here
         if (input.isKeyPressed(SDL_SCANCODE_TAB)) {
             m_inventory.toggle();
+            if (audio) audio->playSound("inventory_open", 0.4f);
         }
         return;
     }
 
     // If a book is open, only update the book (block player movement)
     if (m_activeBook) {
+        int prevPage = m_activeBook->getCurrentPage();
         m_activeBook->update(dt, input);
+        // Detect page turn
+        if (m_activeBook->isOpen() && m_activeBook->getCurrentPage() != prevPage) {
+            if (audio) audio->playSound("page_turn", 0.5f);
+        }
         if (!m_activeBook->isOpen()) {
+            if (audio) audio->playSound("book_open", 0.4f, 0.8f);
             m_activeBook = nullptr;
         }
         return;
@@ -315,6 +341,7 @@ void Scene::update(float dt, const InputManager& input, Renderer& renderer, Audi
     // Tab to open inventory
     if (input.isKeyPressed(SDL_SCANCODE_TAB)) {
         m_inventory.toggle();
+        if (audio) audio->playSound("inventory_open", 0.4f);
         return;
     }
 
@@ -415,12 +442,14 @@ void Scene::update(float dt, const InputManager& input, Renderer& renderer, Audi
             m_lockedMessage = bookDef.lockedMessage;
             m_lockedMessageTimer = 2.0f;
             m_camera.shake(0.05f, 0.2f);
+            if (audio) audio->playSound("locked", 0.5f);
         } else {
             if (!bookDef.requiresItem.empty() && bookDef.consumeItem) {
                 m_inventory.removeItem(bookDef.requiresItem);
             }
             m_books[m_nearBookIndex]->open();
             m_activeBook = m_books[m_nearBookIndex].get();
+            if (audio) audio->playSound("book_open", 0.5f);
         }
     }
 
@@ -489,6 +518,7 @@ void Scene::update(float dt, const InputManager& input, Renderer& renderer, Audi
                 m_lockedMessageTimer = 2.0f;
                 m_triggerCooldown = 1.0f;  // prevent spamming the message
                 m_camera.shake(0.08f, 0.3f);
+                if (audio) audio->playSound("locked", 0.5f);
                 break;
             }
 
@@ -496,6 +526,8 @@ void Scene::update(float dt, const InputManager& input, Renderer& renderer, Audi
             if (!trigger.requiresItem.empty() && trigger.consumeItem) {
                 m_inventory.removeItem(trigger.requiresItem);
             }
+
+            if (audio) audio->playSound("door_open", 0.6f);
 
             std::string targetRoom = trigger.targetRoom;
             glm::vec3 spawnPos = trigger.spawnPos;

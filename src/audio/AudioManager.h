@@ -35,11 +35,19 @@ public:
     void setAmbientVolume(float vol); // 0..1
 
     // Footsteps
-    void generateFootstepSound(); // procedural soft stone footstep
-    void generatePickupSound();   // procedural chime for item pickup
+    void generateFootstepSound();  // procedural soft stone footstep
+    void generateFootstepSound2(); // second variant for alternation
+    void generatePickupSound();    // procedural chime for item pickup
     void playFootstep();
     void setFootstepInterval(float seconds) { m_footstepInterval = seconds; }
     void updateFootsteps(float dt, bool isMoving);
+
+    // Interaction sounds
+    void generateDoorOpenSound();
+    void generateLockedSound();
+    void generateBookOpenSound();
+    void generatePageTurnSound();
+    void generateInventoryOpenSound();
 
     // Simple delay-line reverb
     void setReverb(bool enabled, float feedback = 0.3f, float delayMs = 500.0f);
@@ -83,6 +91,7 @@ private:
     // Footsteps
     float m_footstepTimer = 0.0f;
     float m_footstepInterval = 0.5f;
+    bool m_footstepAlternate = false;
 
     // Reverb delay line (+ cached params for early-return)
     bool m_reverbEnabled = false;

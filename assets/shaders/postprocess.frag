@@ -11,6 +11,16 @@ uniform float uTime;
 uniform float uBloomIntensity;
 uniform vec2 uResolution;
 
+// Per-room post-process parameters
+uniform float uCAStrength;
+uniform float uVignetteOuter;
+uniform float uVignetteInner;
+uniform float uVignetteDarkness;
+uniform float uDesaturation;
+uniform vec3 uColorTint;
+uniform float uContrast;
+uniform float uGrainStrength;
+
 // SSAO
 uniform int uSSAOEnabled;
 
@@ -37,7 +47,7 @@ void main() {
     vec2 center = vTexCoord - 0.5;
     vec2 aspect = vec2(uResolution.x / uResolution.y, 1.0);
     float edgeDist = dot(center * aspect, center * aspect);
-    float caStrength = edgeDist * 0.006;
+    float caStrength = edgeDist * uCAStrength;
     vec3 color;
     color.r = texture(uScreen, vTexCoord + center * caStrength * 1.2).r;
     color.g = texture(uScreen, vTexCoord).g;
@@ -69,24 +79,24 @@ void main() {
     {
         vec2 uv = (vTexCoord - 0.5) * vec2(uResolution.x / uResolution.y, 1.0);
         float dist = length(uv);
-        float vignette = smoothstep(0.7, 0.4, dist);
-        color *= mix(0.5, 1.0, vignette);
+        float vignette = smoothstep(uVignetteOuter, uVignetteInner, dist);
+        color *= mix(uVignetteDarkness, 1.0, vignette);
     }
 
     // --- Film grain ---
     // Spatiotemporal noise: spatial hash + slow time drift to reduce shimmer
-    float grain = rand(floor(vTexCoord * uResolution) + vec2(floor(uTime * 8.0))) * 0.03;
-    color += grain - 0.015;
+    float grain = rand(floor(vTexCoord * uResolution) + vec2(uTime * 137.0)) * uGrainStrength;
+    color += grain - uGrainStrength * 0.5;
 
     // --- Color grading: desaturation + cold tint for cinematic look ---
     {
         float lum = dot(color, vec3(0.2126, 0.7152, 0.0722));
-        color = mix(color, vec3(lum), 0.15); // 15% desaturation
-        color *= vec3(0.92, 0.96, 1.08);     // cold blue tint
+        color = mix(color, vec3(lum), uDesaturation);
+        color *= uColorTint;
     }
 
     // --- Contrast boost (applied globally to avoid 3D/background seam) ---
-    color = (color - 0.5) * 1.05 + 0.5;
+    color = (color - 0.5) * uContrast + 0.5;
 
     // --- ACES filmic tone mapping ---
     // Preserves highlight rolloff and cinematic contrast from HDR values
@@ -98,8 +108,8 @@ void main() {
 
     // --- Dithering (eliminates banding in dark gradients) ---
     // Triangular-distributed dither scaled to one 8-bit LSB (1/255)
-    float dither1 = rand(floor(vTexCoord * uResolution) + vec2(floor(uTime * 4.0) * 37.0));
-    float dither2 = rand(floor(vTexCoord * uResolution) + vec2(floor(uTime * 4.0) * 71.0 + 0.5));
+    float dither1 = rand(floor(vTexCoord * uResolution) + vec2(uTime * 37.0));
+    float dither2 = rand(floor(vTexCoord * uResolution) + vec2(uTime * 71.0 + 0.5));
     vec3 dither = vec3(dither1 + dither2 - 1.0) / 255.0;
     color += dither;
 

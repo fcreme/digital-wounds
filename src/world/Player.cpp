@@ -80,8 +80,8 @@ void Player::update(float dt, const InputManager& input, const Camera& camera) {
         m_headBobTime += dt * std::min(speedRatio, 1.0f);
         m_headBobOffset = std::sin(m_headBobTime * HEAD_BOB_FREQ) * HEAD_BOB_AMP;
     } else {
-        // Smoothly return to zero
-        m_headBobOffset *= 0.9f;
+        // Smoothly return to zero (frame-rate independent)
+        m_headBobOffset *= std::exp(-dt * 8.0f);
         if (std::abs(m_headBobOffset) < 0.001f) m_headBobOffset = 0.0f;
     }
 }

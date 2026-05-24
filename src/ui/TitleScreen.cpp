@@ -53,7 +53,7 @@ void TitleScreen::update(float dt, const InputManager& input) {
     m_particles.update(dt);
 
     // Start fade-out on Enter or Space (only after prompt is visible)
-    if (!m_fadeOut && m_time > 3.5f) {
+    if (!m_fadeOut && m_time > 2.0f) {
         if (input.isKeyPressed(SDL_SCANCODE_RETURN) || input.isKeyPressed(SDL_SCANCODE_SPACE)) {
             m_fadeOut = true;
             m_fadeAlpha = 0.0f;
@@ -91,8 +91,8 @@ void TitleScreen::render(UIOverlay& ui, int screenWidth, int screenHeight) {
         }
     }
 
-    // "Press Enter" — pulses after 3.5s
-    if (m_time > 3.5f && !m_fadeOut) {
+    // "Press Enter" — pulses after 2.0s
+    if (m_time > 2.0f && !m_fadeOut) {
         float pulse = 0.4f + 0.3f * std::sin(m_time * 2.5f);
         const std::string prompt = "Press Enter";
         float scale = 3.0f;

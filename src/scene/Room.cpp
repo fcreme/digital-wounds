@@ -220,6 +220,22 @@ bool loadRoomDef(const std::string& path, RoomDef& out) {
         out.fogParams.far = getOr<float>(fg, "far", 100.0f);
     }
 
+    // Post-process overrides
+    if (j.contains("post_process")) {
+        auto& pp = j["post_process"];
+        out.postProcess.defined = true;
+        out.postProcess.bloomThreshold = getOr<float>(pp, "bloom_threshold", 1.2f);
+        out.postProcess.bloomIntensity = getOr<float>(pp, "bloom_intensity", 0.35f);
+        out.postProcess.caStrength = getOr<float>(pp, "ca_strength", 0.006f);
+        out.postProcess.vignetteOuter = getOr<float>(pp, "vignette_outer", 0.85f);
+        out.postProcess.vignetteInner = getOr<float>(pp, "vignette_inner", 0.3f);
+        out.postProcess.vignetteDarkness = getOr<float>(pp, "vignette_darkness", 0.65f);
+        out.postProcess.desaturation = getOr<float>(pp, "desaturation", 0.15f);
+        if (pp.contains("color_tint")) out.postProcess.colorTint = parseVec3(pp["color_tint"]);
+        out.postProcess.contrast = getOr<float>(pp, "contrast", 1.05f);
+        out.postProcess.grainStrength = getOr<float>(pp, "grain_strength", 0.03f);
+    }
+
     std::cout << "Room: loaded '" << out.name << "' from " << path
               << " (" << out.particles.size() << " particle emitters, "
               << out.fmvOverlays.size() << " FMV overlays, "

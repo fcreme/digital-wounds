@@ -332,6 +332,15 @@ void PostProcess::endAndRender(float time, const glm::mat4& projection) {
         m_shader.setInt("uFogEnabled", 0);
         m_shader.setFloat("uTime", time);
         m_shader.setVec2("uResolution", static_cast<float>(m_width), static_cast<float>(m_height));
+        // Set post-process params to defaults for debug view
+        m_shader.setFloat("uCAStrength", m_ppParams.caStrength);
+        m_shader.setFloat("uVignetteOuter", m_ppParams.vignetteOuter);
+        m_shader.setFloat("uVignetteInner", m_ppParams.vignetteInner);
+        m_shader.setFloat("uVignetteDarkness", m_ppParams.vignetteDarkness);
+        m_shader.setFloat("uDesaturation", m_ppParams.desaturation);
+        m_shader.setVec3("uColorTint", m_ppParams.colorTint.r, m_ppParams.colorTint.g, m_ppParams.colorTint.b);
+        m_shader.setFloat("uContrast", m_ppParams.contrast);
+        m_shader.setFloat("uGrainStrength", m_ppParams.grainStrength);
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
         glBindVertexArray(0);
@@ -348,7 +357,7 @@ void PostProcess::endAndRender(float time, const glm::mat4& projection) {
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, m_colorTex);
     m_brightShader.setInt("uScreen", 0);
-    m_brightShader.setFloat("uThreshold", BLOOM_THRESHOLD);
+    m_brightShader.setFloat("uThreshold", m_ppParams.bloomThreshold);
     glDrawArrays(GL_TRIANGLES, 0, 6);
 
     // --- Bloom: ping-pong blur ---
@@ -384,7 +393,7 @@ void PostProcess::endAndRender(float time, const glm::mat4& projection) {
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, m_pingPongTex[0]);
     m_shader.setInt("uBloomTex", 1);
-    m_shader.setFloat("uBloomIntensity", BLOOM_INTENSITY);
+    m_shader.setFloat("uBloomIntensity", m_ppParams.bloomIntensity);
 
     // Depth texture for fog
     glActiveTexture(GL_TEXTURE2);
@@ -407,6 +416,17 @@ void PostProcess::endAndRender(float time, const glm::mat4& projection) {
 
     m_shader.setFloat("uTime", time);
     m_shader.setVec2("uResolution", static_cast<float>(m_width), static_cast<float>(m_height));
+
+    // Per-room post-process params
+    m_shader.setFloat("uCAStrength", m_ppParams.caStrength);
+    m_shader.setFloat("uVignetteOuter", m_ppParams.vignetteOuter);
+    m_shader.setFloat("uVignetteInner", m_ppParams.vignetteInner);
+    m_shader.setFloat("uVignetteDarkness", m_ppParams.vignetteDarkness);
+    m_shader.setFloat("uDesaturation", m_ppParams.desaturation);
+    m_shader.setVec3("uColorTint", m_ppParams.colorTint.r, m_ppParams.colorTint.g, m_ppParams.colorTint.b);
+    m_shader.setFloat("uContrast", m_ppParams.contrast);
+    m_shader.setFloat("uGrainStrength", m_ppParams.grainStrength);
+
     glDrawArrays(GL_TRIANGLES, 0, 6);
 
     glBindVertexArray(0);

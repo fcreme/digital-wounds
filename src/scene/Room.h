@@ -95,6 +95,20 @@ struct FMVOverlayDef {
     glm::vec3 tint{1.0f};      // color tint
 };
 
+struct PostProcessDef {
+    float bloomThreshold = 1.2f;
+    float bloomIntensity = 0.35f;
+    float caStrength = 0.006f;
+    float vignetteOuter = 0.85f;
+    float vignetteInner = 0.3f;
+    float vignetteDarkness = 0.65f;
+    float desaturation = 0.15f;
+    glm::vec3 colorTint{0.92f, 0.96f, 1.08f};
+    float contrast = 1.05f;
+    float grainStrength = 0.03f;
+    bool defined = false;
+};
+
 struct CollisionBox {
     glm::vec2 min{0.0f};  // X, Z
     glm::vec2 max{0.0f};  // X, Z
@@ -162,6 +176,9 @@ struct RoomDef {
 
     // Fog parameters
     FogParamsDef fogParams;
+
+    // Per-room post-process overrides
+    PostProcessDef postProcess;
 };
 
 bool loadRoomDef(const std::string& path, RoomDef& out);
