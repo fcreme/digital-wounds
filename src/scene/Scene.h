@@ -3,6 +3,7 @@
 #include "core/GameSettings.h"
 #include "scene/Room.h"
 #include "scene/RoomTransition.h"
+#include "fx/PostProcess.h"
 #include "renderer/Camera.h"
 #include "renderer/Mesh.h"
 #include "renderer/Texture.h"
@@ -107,6 +108,14 @@ private:
     std::string m_pickupMessage;
     float m_pickupMessageTimer = 0.0f;
     float m_pickupFlashTimer = 0.0f;
+
+    // Post-process lerp during room transitions
+    PostProcessParams m_ppFrom;
+    PostProcessParams m_ppTo;
+    FogParamsDef m_fogFrom;
+    FogParamsDef m_fogTo;
+    bool m_ppLerping = false;
+    Renderer* m_rendererCache = nullptr;  // cached for lerp application during update
 
     float m_propTime = 0.0f;
     bool m_playerMoving = false;

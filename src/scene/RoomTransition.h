@@ -2,6 +2,7 @@
 
 #include "renderer/Shader.h"
 #include <glad/gl.h>
+#include <algorithm>
 #include <functional>
 
 namespace dw {
@@ -16,6 +17,9 @@ public:
     void update(float dt);
     void render();
     bool isActive() const { return m_active; }
+    float getProgress() const { return m_active ? std::min(m_timer / m_duration, 1.0f) : 0.0f; }
+    bool isPastMidpoint() const { return m_active && m_midpointFired; }
+    float getAlpha() const { return m_alpha; }
     void shutdown();
 
 private:

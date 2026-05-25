@@ -184,32 +184,43 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
         }
     }
 
-    // Set fog params from room definition
+    // Build target fog params from room definition
+    FogParamsDef newFog;
     if (m_currentRoom.fogParams.defined) {
-        renderer.getPostProcess().setFogParams(
-            m_currentRoom.fogParams.color,
-            m_currentRoom.fogParams.density,
-            m_currentRoom.fogParams.maxDistance,
-            m_currentRoom.fogParams.near,
-            m_currentRoom.fogParams.far);
+        newFog = m_currentRoom.fogParams;
     }
 
-    // Apply per-room post-process parameters (or reset to defaults)
-    {
-        PostProcessParams params;
-        if (m_currentRoom.postProcess.defined) {
-            params.bloomThreshold = m_currentRoom.postProcess.bloomThreshold;
-            params.bloomIntensity = m_currentRoom.postProcess.bloomIntensity;
-            params.caStrength = m_currentRoom.postProcess.caStrength;
-            params.vignetteOuter = m_currentRoom.postProcess.vignetteOuter;
-            params.vignetteInner = m_currentRoom.postProcess.vignetteInner;
-            params.vignetteDarkness = m_currentRoom.postProcess.vignetteDarkness;
-            params.desaturation = m_currentRoom.postProcess.desaturation;
-            params.colorTint = m_currentRoom.postProcess.colorTint;
-            params.contrast = m_currentRoom.postProcess.contrast;
-            params.grainStrength = m_currentRoom.postProcess.grainStrength;
+    // Build target post-process params from room definition
+    PostProcessParams newPP;
+    if (m_currentRoom.postProcess.defined) {
+        newPP.bloomThreshold = m_currentRoom.postProcess.bloomThreshold;
+        newPP.bloomIntensity = m_currentRoom.postProcess.bloomIntensity;
+        newPP.caStrength = m_currentRoom.postProcess.caStrength;
+        newPP.vignetteOuter = m_currentRoom.postProcess.vignetteOuter;
+        newPP.vignetteInner = m_currentRoom.postProcess.vignetteInner;
+        newPP.vignetteDarkness = m_currentRoom.postProcess.vignetteDarkness;
+        newPP.desaturation = m_currentRoom.postProcess.desaturation;
+        newPP.colorTint = m_currentRoom.postProcess.colorTint;
+        newPP.contrast = m_currentRoom.postProcess.contrast;
+        newPP.grainStrength = m_currentRoom.postProcess.grainStrength;
+    }
+
+    if (m_ppLerping) {
+        // During a transition: store targets, lerp will apply them gradually
+        m_ppTo = newPP;
+        m_fogTo = newFog;
+    } else {
+        // Direct load (initial room load, no transition): apply immediately
+        m_ppFrom = newPP;
+        m_ppTo = newPP;
+        m_fogFrom = newFog;
+        m_fogTo = newFog;
+        renderer.getPostProcess().setPostProcessParams(newPP);
+        if (newFog.defined) {
+            renderer.getPostProcess().setFogParams(
+                newFog.color, newFog.density, newFog.maxDistance,
+                newFog.near, newFog.far);
         }
-        renderer.getPostProcess().setPostProcessParams(params);
     }
 
     // Spawn particle emitters from room JSON
@@ -277,6 +288,52 @@ void Scene::update(float dt, const InputManager& input, Renderer& renderer, Audi
     m_audio = audio;  // cache for use in loadRoom (called from transitions)
 
     m_transition.update(dt);
+
+    // Lerp post-process params during fade-in phase of room transition
+    if (m_ppLerping) {
+        if (m_transition.isActive() && m_transition.isPastMidpoint()) {
+            // Phase 2: fade-in. Alpha goes from 1→0, we want blend factor 0→1.
+            float alpha = m_transition.getAlpha();
+            float t = 1.0f - alpha;  // 0 at full black, 1 at fully revealed
+
+            // Lerp PostProcessParams
+            PostProcessParams blended;
+            blended.bloomThreshold  = glm::mix(m_ppFrom.bloomThreshold,  m_ppTo.bloomThreshold,  t);
+            blended.bloomIntensity  = glm::mix(m_ppFrom.bloomIntensity,  m_ppTo.bloomIntensity,  t);
+            blended.caStrength      = glm::mix(m_ppFrom.caStrength,      m_ppTo.caStrength,      t);
+            blended.vignetteOuter   = glm::mix(m_ppFrom.vignetteOuter,   m_ppTo.vignetteOuter,   t);
+            blended.vignetteInner   = glm::mix(m_ppFrom.vignetteInner,   m_ppTo.vignetteInner,   t);
+            blended.vignetteDarkness= glm::mix(m_ppFrom.vignetteDarkness,m_ppTo.vignetteDarkness,t);
+            blended.desaturation    = glm::mix(m_ppFrom.desaturation,    m_ppTo.desaturation,    t);
+            blended.colorTint       = glm::mix(m_ppFrom.colorTint,       m_ppTo.colorTint,       t);
+            blended.contrast        = glm::mix(m_ppFrom.contrast,        m_ppTo.contrast,        t);
+            blended.grainStrength   = glm::mix(m_ppFrom.grainStrength,   m_ppTo.grainStrength,   t);
+
+            m_rendererCache->getPostProcess().setPostProcessParams(blended);
+
+            // Lerp fog params
+            if (m_fogFrom.defined || m_fogTo.defined) {
+                glm::vec3 fogColor = glm::mix(m_fogFrom.color, m_fogTo.color, t);
+                float fogDensity   = glm::mix(m_fogFrom.density, m_fogTo.density, t);
+                float fogMaxDist   = glm::mix(m_fogFrom.maxDistance, m_fogTo.maxDistance, t);
+                float fogNear      = glm::mix(m_fogFrom.near, m_fogTo.near, t);
+                float fogFar       = glm::mix(m_fogFrom.far, m_fogTo.far, t);
+                m_rendererCache->getPostProcess().setFogParams(fogColor, fogDensity, fogMaxDist, fogNear, fogFar);
+            }
+        } else if (!m_transition.isActive()) {
+            // Transition just ended — apply final target params exactly
+            m_rendererCache->getPostProcess().setPostProcessParams(m_ppTo);
+            if (m_fogTo.defined) {
+                m_rendererCache->getPostProcess().setFogParams(
+                    m_fogTo.color, m_fogTo.density, m_fogTo.maxDistance,
+                    m_fogTo.near, m_fogTo.far);
+            }
+            m_ppFrom = m_ppTo;
+            m_fogFrom = m_fogTo;
+            m_ppLerping = false;
+        }
+    }
+
     if (m_transition.isActive()) return;
 
     // Pause menu
@@ -608,6 +665,12 @@ void Scene::update(float dt, const InputManager& input, Renderer& renderer, Audi
             }
 
             if (audio) audio->playSound("door_open", 0.6f);
+
+            // Capture current post-process state before transition begins
+            m_ppFrom = m_ppTo;  // use current target (already applied)
+            m_fogFrom = m_fogTo;
+            m_rendererCache = &renderer;
+            m_ppLerping = true;
 
             std::string targetRoom = trigger.targetRoom;
             glm::vec3 spawnPos = trigger.spawnPos;
