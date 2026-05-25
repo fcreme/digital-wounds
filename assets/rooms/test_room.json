@@ -84,6 +84,18 @@
             "pages": ["assets/textures/book_page1.png", "assets/textures/book_page2.png", "assets/textures/book_page3.png"]
         }
     ],
+    "post_process": {
+        "bloom_threshold": 0.9,
+        "bloom_intensity": 0.45,
+        "ca_strength": 0.003,
+        "vignette_outer": 0.95,
+        "vignette_inner": 0.35,
+        "vignette_darkness": 0.55,
+        "desaturation": 0.08,
+        "color_tint": [1.02, 0.98, 0.88],
+        "contrast": 1.03,
+        "grain_strength": 0.02
+    },
     "fog": {
         "color": [0.03, 0.04, 0.05],
         "density": 3.0,
