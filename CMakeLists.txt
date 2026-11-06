@@ -74,6 +74,8 @@ add_executable(dw_tests
     src/world/ArtistCatalog.cpp
     tests/test_painting_data.cpp
     src/world/PaintingData.cpp
+    tests/test_text_layout.cpp
+    src/ui/TextLayout.cpp
     src/utils/stb_impl.cpp
 )
 target_compile_definitions(dw_tests PRIVATE DW_TEST_FIXTURES="${CMAKE_SOURCE_DIR}/tests/fixtures")

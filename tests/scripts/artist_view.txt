@@ -1,0 +1,97 @@
+# Meet the artist: aim at r002 (pokey-pixie-pinprick, design 0) on the +x wall from the spawn point.
+# Run from build-test: ./digital_wounds --script ../tests/scripts/artist_view.txt
+wait 1
+state start
+pos start
+mouse -1212 -60
+wait 0.6
+state aimed
+shot gallery_aimed
+key tap E
+wait 1
+state opened
+shot view_page
+# A on the first page stays put
+key tap A
+wait 0.3
+state a_on_first
+# D through the pages and past the last one
+key tap D
+wait 0.3
+state d1
+shot view_page2
+key tap D
+wait 0.3
+key tap D
+wait 0.3
+key tap D
+wait 0.3
+key tap D
+wait 0.3
+state d5
+key tap D
+wait 0.3
+state d_past_last
+shot view_last
+key tap A
+wait 0.3
+state a_back
+# Mouse look and E while open do nothing
+mouse -400 0
+wait 0.3
+key tap E
+wait 0.3
+state mouse_and_e
+# W while open does not walk
+key down W
+wait 0.5
+key up W
+pos open_w
+# Window sizes while open
+resize 960 540
+wait 0.8
+state min
+shot view_960x540
+resize 1600 900
+wait 0.8
+shot view_1600x900
+resize 1280 720
+wait 0.8
+shot view_1280x720
+# Q closes; walking works again
+key tap Q
+wait 1
+state closed
+pos after_close
+key down W
+wait 0.5
+key up W
+wait 0.2
+pos after_w
+state after_w
+# Re-open and hammer every key during the opening fade
+mouse 1212 60
+wait 0.3
+mouse -1212 -60
+wait 0.6
+state reaimed
+key tap E
+key tap A
+key tap D
+key tap E
+key tap Q
+wait 0.05
+state during_fade
+wait 1
+state after_fade
+key tap Q
+wait 1
+state closed_again
+# A gap: the wall below the frames at z=-9; E does nothing
+mouse -241 144
+wait 0.5
+state gap
+key tap E
+wait 1
+state gap_after_e
+quit

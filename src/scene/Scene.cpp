@@ -81,6 +81,8 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
     m_activeBook = nullptr;
     m_worldItems.clear();
     m_nearItemIndex = -1;
+    m_nearPainting = -1;
+    m_artistView.reset();
     m_depthGeometry.reset();
     m_paintingWall.shutdown();
     m_paintings.clear();
@@ -497,6 +499,20 @@ void Scene::update(float dt, const InputManager& input, Renderer& renderer, Audi
         return;
     }
 
+    // If an artist view is open, only it updates (no walking, no picking)
+    if (m_artistView.isOpen()) {
+        m_nearPainting = -1;
+        int prevPage = m_artistView.currentPage();
+        m_artistView.update(dt, input);
+        if (m_artistView.isOpen() && m_artistView.currentPage() != prevPage) {
+            if (audio) audio->playSound("page_turn", 0.5f);
+        }
+        if (!m_artistView.isOpen()) {
+            if (audio) audio->playSound("book_open", 0.4f, 0.8f);
+        }
+        return;
+    }
+
     // Tab to open inventory
     if (input.isKeyPressed(SDL_SCANCODE_TAB)) {
         m_inventory.toggle();
@@ -576,8 +592,13 @@ void Scene::update(float dt, const InputManager& input, Renderer& renderer, Audi
         }
     }
 
+    // Painting under the crosshair
+    m_nearPainting = m_currentRoom.firstPerson
+        ? pickPainting(m_paintings, camPos, lookDir) : -1;
+
     // Smooth highlight animation
-    float targetHighlight = (m_nearBookIndex >= 0 || m_nearItemIndex >= 0) ? 1.0f : 0.0f;
+    float targetHighlight = (m_nearBookIndex >= 0 || m_nearItemIndex >= 0 || m_nearPainting >= 0)
+        ? 1.0f : 0.0f;
     m_highlightAmount += (targetHighlight - m_highlightAmount) * std::min(dt * 8.0f, 1.0f);
 
     // E to interact with nearby item (priority over book)
@@ -608,6 +629,14 @@ void Scene::update(float dt, const InputManager& input, Renderer& renderer, Audi
             }
             m_books[m_nearBookIndex]->open();
             m_activeBook = m_books[m_nearBookIndex].get();
+            if (audio) audio->playSound("book_open", 0.5f);
+        }
+    }
+    // E on a framed painting opens its artist on that painting's design
+    else if (m_nearPainting >= 0 && input.isKeyPressed(SDL_SCANCODE_E)) {
+        const Painting& painting = m_paintings[m_nearPainting];
+        if (const Artist* artist = m_catalog.find(painting.artistId)) {
+            m_artistView.open(*artist, painting.designIndex);
             if (audio) audio->playSound("book_open", 0.5f);
         }
     }
@@ -795,7 +824,7 @@ void Scene::renderObjects() {
     }
 
     // Artist paintings hang over the gallery's own; they write depth and cast no shadow.
-    m_paintingWall.render(m_camera, -1, 0.0f);
+    m_paintingWall.render(m_camera, m_nearPainting, m_highlightAmount);
 }
 
 void Scene::renderFMVOverlays() {
@@ -831,7 +860,7 @@ void Scene::renderUI(UIOverlay& ui, int screenWidth, int screenHeight) {
     }
 
     // Crosshair in FP mode (only when no book open)
-    if (m_currentRoom.firstPerson && !m_activeBook) {
+    if (m_currentRoom.firstPerson && !m_activeBook && !m_artistView.isOpen()) {
         ui.drawCrosshair();
     }
 
@@ -842,6 +871,15 @@ void Scene::renderUI(UIOverlay& ui, int screenWidth, int screenHeight) {
     // Show interaction prompt when looking at a book
     else if (m_nearBookIndex >= 0 && !m_activeBook) {
         ui.drawPrompt("Press E to read");
+    }
+    // Show interaction prompt when looking at a painting
+    else if (m_nearPainting >= 0 && !m_activeBook && !m_artistView.isOpen() && !m_paused) {
+        ui.drawPrompt("Press E to see the artist");
+    }
+
+    // Render the artist view
+    if (m_artistView.isOpen()) {
+        m_artistView.renderUI(ui, screenWidth, screenHeight);
     }
 
     // Render active book viewer

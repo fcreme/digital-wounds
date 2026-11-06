@@ -175,7 +175,8 @@ void Engine::processEvents() {
     while (SDL_PollEvent(&event)) {
 #ifdef DW_TEST_DRIVER
         // Scripted runs ignore real input; stray events have spoiled runs before.
-        if (m_driver && event.type != SDL_QUIT) continue;
+        // Window events pass so the driver's resize command takes effect.
+        if (m_driver && event.type != SDL_QUIT && event.type != SDL_WINDOWEVENT) continue;
 #endif
         switch (event.type) {
             case SDL_QUIT:

@@ -40,7 +40,7 @@ bool TestDriver::load(const std::string& path) {
 }
 
 bool TestDriver::isObservation(const std::string& name) {
-    return name == "shot" || name == "pos" || name == "state" || name == "sizes" || name == "fps";
+    return name == "shot" || name == "pos" || name == "state" || name == "sizes" || name == "resize" || name == "fps";
 }
 
 void TestDriver::quit() {
@@ -111,6 +111,9 @@ void TestDriver::run(const Command& cmd, InputManager* input, Engine* engine) {
     } else if (n == "sizes" && engine) {
         int dw = 0, dh = 0;
         SDL_GL_GetDrawableSize(engine->m_window, &dw, &dh);
+        int sw = 0, sh = 0;
+        SDL_GetWindowSize(engine->m_window, &sw, &sh);
+        std::cout << "DRIVER sdl_window=" << sw << "x" << sh << "\n";
         std::cout << "DRIVER sizes window=" << engine->m_windowWidth << "x" << engine->m_windowHeight
                   << " drawable=" << dw << "x" << dh
                   << " mouse_grab=" << (SDL_GetRelativeMouseMode() ? "on" : "off") << "\n";
@@ -120,10 +123,25 @@ void TestDriver::run(const Command& cmd, InputManager* input, Engine* engine) {
                   << " frames in " << secs << " s)\n";
     } else if (n == "pos" && engine) {
         const auto& p = engine->m_scene->getCamera().getPosition();
-        std::cout << "DRIVER pos " << arg(0) << " x=" << p.x << " z=" << p.z << "\n";
+        const glm::vec3 look = engine->m_scene->debugLookDirection();
+        std::cout << "DRIVER pos " << arg(0) << " x=" << p.x << " z=" << p.z
+                  << " look=" << look.x << "," << look.y << "," << look.z << "\n";
+    } else if (n == "resize" && engine) {
+        SDL_SetWindowSize(engine->m_window, std::atoi(arg(0).c_str()), std::atoi(arg(1).c_str()));
     } else if (n == "state" && engine) {
-        // Painting and artist state arrive with the discovery feature.
-        std::cout << "DRIVER state " << arg(0) << " near=none view=closed artist=none page=0\n";
+        // near is the painting under the crosshair; page is 0-based like a design index.
+        const Scene& sc = *engine->m_scene;
+        const int np = sc.debugNearPainting();
+        std::string nearText = "none";
+        if (np >= 0) {
+            const Painting& p = sc.debugPaintings()[np];
+            nearText = p.id + "(" + p.artistId + "#" + std::to_string(p.designIndex) + ")";
+        }
+        const ArtistView& v = sc.debugArtistView();
+        std::cout << "DRIVER state " << arg(0) << " near=" << nearText
+                  << " view=" << (v.isOpen() ? "open" : "closed")
+                  << " artist=" << (v.isOpen() ? v.artistId() : std::string("none"))
+                  << " page=" << (v.isOpen() ? v.currentPage() : 0) << "\n";
     } else if (n == "shot" && engine) {
         int w = 0, h = 0;
         SDL_GL_GetDrawableSize(engine->m_window, &w, &h);

@@ -13,6 +13,7 @@
 #include "fx/FMVOverlay.h"
 #include "world/Player.h"
 #include "world/Book.h"
+#include "ui/ArtistView.h"
 #include "world/Item.h"
 #include "world/Inventory.h"
 #include "world/ArtistCatalog.h"
@@ -75,6 +76,13 @@ public:
     void setSettings(const GameSettings& s);
     bool wantsQuit() const { return m_wantsQuit; }
     bool isPaused() const { return m_paused; }
+#ifdef DW_TEST_DRIVER
+    // Read-only views of the artist discovery state for the test driver.
+    int debugNearPainting() const { return m_nearPainting; }
+    const std::vector<Painting>& debugPaintings() const { return m_paintings; }
+    const ArtistView& debugArtistView() const { return m_artistView; }
+    glm::vec3 debugLookDirection() const { return m_player.getLookDirection(); }
+#endif
 
 private:
     RoomDef m_currentRoom;
@@ -105,6 +113,8 @@ private:
     ArtistCatalog m_catalog;
     std::vector<Painting> m_paintings;
     PaintingWall m_paintingWall;
+    ArtistView m_artistView;
+    int m_nearPainting = -1;  // painting under the crosshair, -1 if none
 
     // Depth pre-pass hidden geometry
     std::unique_ptr<Model> m_depthGeometry;
