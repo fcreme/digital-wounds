@@ -7,6 +7,7 @@ import json
 import os
 import struct
 import sys
+import tempfile
 import unittest
 import zlib
 
@@ -51,11 +52,6 @@ class Catalog(unittest.TestCase):
         self.assertEqual(len(set(ids)), 20)
         self.assertIn("dark-ink", ids)
 
-    def test_design_counts_cover_the_rects_as_evenly_as_possible(self):
-        counts = [len(artist["designs"]) for artist in gen_standins.ARTISTS]
-        self.assertEqual(sum(counts), len(build_paintings.load_rects()))
-        self.assertLessEqual(max(counts) - min(counts), 1)
-
     def test_dark_ink_keeps_its_text_and_first_four_designs(self):
         with open(CONFIG) as f:
             config = json.load(f)
@@ -93,16 +89,30 @@ class Catalog(unittest.TestCase):
 class GeneratedAssets(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        # The generator's own output, in a temporary folder: the committed
+        # assets/artists is hand-editable data and is not read here.
+        cls.temp = tempfile.TemporaryDirectory()
+        cls.addClassCleanup(cls.temp.cleanup)
+        cls.directory = os.path.join(cls.temp.name, "artists")
+        gen_standins.generate(cls.directory)
         cls.images = []
         for artist in gen_standins.ARTISTS:
             for design in artist["designs"]:
-                path = os.path.join(gen_standins.ARTISTS_DIR, artist["id"], design["id"] + ".png")
+                path = os.path.join(cls.directory, artist["id"], design["id"] + ".png")
                 with open(path, "rb") as f:
                     cls.images.append((artist["id"] + "/" + design["id"], read_png(f.read())))
 
+    def test_design_counts_cover_the_rects_as_evenly_as_possible(self):
+        counts = []
+        for artist in gen_standins.ARTISTS:
+            with open(os.path.join(self.directory, artist["id"], "artist.json")) as f:
+                counts.append(len(json.load(f)["designs"]))
+        self.assertEqual(sum(counts), len(build_paintings.load_rects()))
+        self.assertLessEqual(max(counts) - min(counts), 1)
+
     def test_artist_json_matches_the_catalog(self):
         for artist in gen_standins.ARTISTS:
-            with open(os.path.join(gen_standins.ARTISTS_DIR, artist["id"], "artist.json")) as f:
+            with open(os.path.join(self.directory, artist["id"], "artist.json")) as f:
                 written = json.load(f)
             self.assertEqual(written, gen_standins.artist_json(artist))
 

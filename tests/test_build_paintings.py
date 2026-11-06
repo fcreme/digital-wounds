@@ -6,6 +6,7 @@ Run from the repo root: python3 -m unittest tests/test_build_paintings.py
 import json
 import os
 import sys
+import tempfile
 import unittest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -236,16 +237,40 @@ class Assignment(unittest.TestCase):
             )
 
 
-class RealAssets(unittest.TestCase):
-    """The committed museum.json is what --assign produces from committed artists."""
+class GeneratorOutput(unittest.TestCase):
+    """--assign on the generator's own artists, in a temporary folder."""
 
-    def test_museum_json_matches_a_fresh_assignment(self):
-        with open(build_paintings.PAINTINGS_PATH) as f:
-            committed = json.load(f)["paintings"]
-        fresh = build_paintings.assign_paintings(
-            build_paintings.placed_rects(), build_paintings.load_artists()
-        )
-        self.assertEqual(committed, fresh)
+    @classmethod
+    def setUpClass(cls):
+        import gen_standins
+
+        cls.temp = tempfile.TemporaryDirectory()
+        cls.addClassCleanup(cls.temp.cleanup)
+        cls.directory = os.path.join(cls.temp.name, "artists")
+        gen_standins.generate(cls.directory)
+
+    def test_assignment_is_deterministic_and_round_trips_through_the_file(self):
+        placed = build_paintings.placed_rects()
+        artists = build_paintings.load_artists(self.directory)
+        first = build_paintings.assign_paintings(placed, artists)
+        self.assertEqual(first, build_paintings.assign_paintings(placed, artists))
+        path = os.path.join(self.temp.name, "museum.json")
+        build_paintings.write_paintings(first, path)
+        self.assertEqual(build_paintings.read_paintings(path), first)
+
+
+class RealAssets(unittest.TestCase):
+    """Invariants that survive hand edits to the committed assets."""
+
+    def test_museum_json_covers_every_rect_and_every_reference_resolves(self):
+        paintings = build_paintings.read_paintings()
+        ids = [p["id"] for p in paintings]
+        self.assertEqual(len(ids), len(set(ids)))
+        self.assertEqual(set(ids), {r["id"] for r in build_paintings.load_rects()})
+        designs = {a["id"]: set(a["designs"]) for a in build_paintings.load_artists()}
+        for painting in paintings:
+            self.assertIn(painting["artist"], designs, painting["id"])
+            self.assertIn(painting["design"], designs[painting["artist"]], painting["id"])
 
     def test_room_names_the_paintings_file(self):
         with open(os.path.join(ROOT, "assets", "rooms", "museum.json")) as f:

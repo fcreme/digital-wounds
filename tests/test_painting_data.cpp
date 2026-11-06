@@ -91,41 +91,48 @@ TEST(wrongTopLevelTypeReturnsEmpty) {
     CHECK(loadPaintings(PFIX + "/wrong-type.json", c).empty());
 }
 
-// The generated stand-ins, as the game will load them.
+// The committed assets, as the game will load them. Only invariants that
+// survive hand edits: artists and paintings may be added or reassigned.
 TEST(realArtistsAndPaintingsLoadCleanly) {
     const std::string root = std::string(DW_TEST_FIXTURES) + "/../..";
     ArtistCatalog c;
-    CHECK(c.loadFromDirectory(root + "/assets/artists") == 20);
+    CHECK(c.loadFromDirectory(root + "/assets/artists") >= 1);
     CHECK(c.warnings().empty());
 
     std::ifstream rectFile(root + "/tools/data/painting_rects.json");
     const nlohmann::json rects = nlohmann::json::parse(rectFile, nullptr, false);
     CHECK(rects.is_object());
     if (!rects.is_object()) return;
-    const size_t rectCount = rects["rects"].size();
-    CHECK(rectCount == 114);
 
+    // Nothing skipped: every entry resolved to a known artist and design.
     std::vector<Painting> v = loadPaintings(root + "/assets/paintings/museum.json", c);
-    CHECK(v.size() == rectCount);
-
-    size_t designs = 0;
-    for (const Artist& a : c.artists()) designs += a.designs.size();
-    CHECK(designs == rectCount);
+    CHECK(v.size() == rects["rects"].size());
+    for (const nlohmann::json& rect : rects["rects"]) {
+        bool found = false;
+        for (const Painting& p : v) {
+            if (p.id == rect["id"].get<std::string>()) { found = true; break; }
+        }
+        CHECK(found);
+    }
+    for (const Painting& p : v) {
+        const Artist* a = c.find(p.artistId);
+        CHECK(a != nullptr);
+        CHECK(p.designIndex >= 0);
+        if (a) CHECK(static_cast<size_t>(p.designIndex) < a->designs.size());
+    }
 }
 
-TEST(realDesignImagesDecodeOnPaper) {
+TEST(realDesignImagesDecode) {
     const std::string root = std::string(DW_TEST_FIXTURES) + "/../..";
     ArtistCatalog c;
-    CHECK(c.loadFromDirectory(root + "/assets/artists") == 20);
+    CHECK(c.loadFromDirectory(root + "/assets/artists") >= 1);
     for (const Artist& a : c.artists()) {
         for (const ArtistDesign& d : a.designs) {
             int w = 0, h = 0, channels = 0;
             unsigned char* pixels = stbi_load(d.imagePath.c_str(), &w, &h, &channels, 4);
             CHECK(pixels != nullptr);
             if (!pixels) continue;
-            CHECK(w == 1024 && h == 1024);
-            // Corner pixel is the paper colour #E6DCC8.
-            CHECK(pixels[0] == 0xE6 && pixels[1] == 0xDC && pixels[2] == 0xC8 && pixels[3] == 255);
+            CHECK(w > 0 && h > 0);
             stbi_image_free(pixels);
         }
     }

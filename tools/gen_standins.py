@@ -237,28 +237,28 @@ def render(artist_id, design):
 
 
 def _write_one(job):
-    index, design_index = job
+    index, design_index, directory = job
     artist = ARTISTS[index]
     design = artist["designs"][design_index]
-    path = os.path.join(ARTISTS_DIR, artist["id"], design["id"] + ".png")
+    path = os.path.join(directory, artist["id"], design["id"] + ".png")
     data = render(artist["id"], design)
     with open(path, "wb") as f:
         f.write(data)
     return len(data)
 
 
-def generate():
+def generate(directory=ARTISTS_DIR):
     """Writes every artist. Returns the total size of the images in bytes."""
-    if os.path.isdir(ARTISTS_DIR):
-        shutil.rmtree(ARTISTS_DIR)
+    if os.path.isdir(directory):
+        shutil.rmtree(directory)
     jobs = []
     for index, artist in enumerate(ARTISTS):
-        folder = os.path.join(ARTISTS_DIR, artist["id"])
+        folder = os.path.join(directory, artist["id"])
         os.makedirs(folder)
         with open(os.path.join(folder, "artist.json"), "w") as f:
             json.dump(artist_json(artist), f, indent=2)
             f.write("\n")
-        jobs.extend((index, d) for d in range(len(artist["designs"])))
+        jobs.extend((index, d, directory) for d in range(len(artist["designs"])))
     with multiprocessing.Pool() as pool:
         sizes = pool.map(_write_one, jobs, chunksize=1)
     return sum(sizes)

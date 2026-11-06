@@ -67,6 +67,8 @@ if(DW_TEST_DRIVER)
 endif()
 
 # --- Unit tests (OpenGL-free sources only) ---
+option(DW_BUILD_TESTS "Build the unit tests (dw_tests)" ON)
+if(DW_BUILD_TESTS)
 enable_testing()
 add_executable(dw_tests
     tests/test_main.cpp
@@ -84,16 +86,23 @@ target_include_directories(dw_tests PRIVATE
     ${CMAKE_SOURCE_DIR}/lib
     ${CMAKE_SOURCE_DIR}/tests
 )
-find_package(glm CONFIG REQUIRED)
-target_link_libraries(dw_tests PRIVATE glm::glm)
+# The game finds GLM through the compiler include path; do the same if no
+# glmConfig.cmake is installed.
+find_package(glm CONFIG QUIET)
+if(glm_FOUND)
+    target_link_libraries(dw_tests PRIVATE glm::glm)
+else()
+    target_include_directories(dw_tests PRIVATE ${SDL2_INCLUDE_DIRS})
+endif()
 add_test(NAME dw_tests COMMAND dw_tests)
+if(NOT MSVC)
+    target_compile_options(dw_tests PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+endif()
 
 # --- Compiler warnings ---
 if(MSVC)
     target_compile_options(${PROJECT_NAME} PRIVATE /W4)
 else()
     target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic)
-endif()
-if(NOT MSVC)
-    target_compile_options(dw_tests PRIVATE -Wall -Wextra -Wpedantic)
 endif()

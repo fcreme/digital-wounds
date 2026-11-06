@@ -314,7 +314,11 @@ void Engine::startGame() {
 
     m_scene->setAudioManager(m_audio.get());
     m_scene->setSettings(m_settings);
-    m_scene->loadRoom("assets/rooms/museum.json", *m_renderer);
+    if (!m_scene->loadRoom("assets/rooms/museum.json", *m_renderer)) {
+        std::cerr << "Failed to load assets/rooms/museum.json\n";
+        m_running = false;
+        return;
+    }
 
     m_gameState = GameState::Playing;
 }
