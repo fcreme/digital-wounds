@@ -49,13 +49,14 @@ bool Engine::init(const std::string& title, int width, int height) {
         title.c_str(),
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
         m_windowWidth, m_windowHeight,
-        SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE
+        SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
     );
 
     if (!m_window) {
         std::cerr << "SDL_CreateWindow failed: " << SDL_GetError() << "\n";
         return false;
     }
+    SDL_SetWindowMinimumSize(m_window, 960, 540);
 
     m_glContext = SDL_GL_CreateContext(m_window);
     if (!m_glContext) {
@@ -83,7 +84,8 @@ bool Engine::init(const std::string& title, int width, int height) {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glClearColor(0.02f, 0.02f, 0.03f, 1.0f);
-    glViewport(0, 0, m_windowWidth, m_windowHeight);
+    SDL_GL_GetDrawableSize(m_window, &m_drawableWidth, &m_drawableHeight);
+    glViewport(0, 0, m_drawableWidth, m_drawableHeight);
 
     // Input
     m_inputManager = std::make_unique<InputManager>();
@@ -115,7 +117,7 @@ bool Engine::init(const std::string& title, int width, int height) {
 
     // Renderer
     m_renderer = std::make_unique<Renderer>();
-    if (!m_renderer->init(m_windowWidth, m_windowHeight)) {
+    if (!m_renderer->init(m_drawableWidth, m_drawableHeight)) {
         std::cerr << "Failed to init renderer\n";
         return false;
     }
@@ -202,10 +204,11 @@ void Engine::processEvents() {
                 m_inputManager->onMouseUp(event.button.button);
                 break;
             case SDL_WINDOWEVENT:
-                if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
-                    m_windowWidth = event.window.data1;
-                    m_windowHeight = event.window.data2;
-                    m_renderer->onResize(m_windowWidth, m_windowHeight);
+                if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
+                    SDL_GetWindowSize(m_window, &m_windowWidth, &m_windowHeight);
+                    SDL_GL_GetDrawableSize(m_window, &m_drawableWidth, &m_drawableHeight);
+                    m_renderer->onResize(m_drawableWidth, m_drawableHeight);
+                    if (m_scene) m_scene->onResize(m_drawableWidth, m_drawableHeight);
                     if (m_ui) m_ui->onResize(m_windowWidth, m_windowHeight);
                     if (m_titleScreen) m_titleScreen->onResize(m_windowWidth, m_windowHeight);
                 }
@@ -259,7 +262,7 @@ void Engine::render() {
                 auto& pp = m_renderer->getPostProcess();
                 m_scene->getParticleSystem().setDepthTexture(
                     pp.getDepthTexture(), pp.getNearPlane(), pp.getFarPlane(),
-                    m_windowWidth, m_windowHeight);
+                    m_drawableWidth, m_drawableHeight);
             }
             m_scene->renderParticles();
 
@@ -281,7 +284,7 @@ void Engine::render() {
 void Engine::renderTitleScreen() {
     // Render directly to the default framebuffer (no post-processing)
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glViewport(0, 0, m_windowWidth, m_windowHeight);
+    glViewport(0, 0, m_drawableWidth, m_drawableHeight);
     m_titleScreen->render(*m_ui, m_windowWidth, m_windowHeight);
 }
 

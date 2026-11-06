@@ -8,16 +8,16 @@
 
 namespace dw {
 
-bool Renderer::init(int windowWidth, int windowHeight) {
-    m_windowWidth = windowWidth;
-    m_windowHeight = windowHeight;
+bool Renderer::init(int drawableWidth, int drawableHeight) {
+    m_drawableWidth = drawableWidth;
+    m_drawableHeight = drawableHeight;
 
     if (!m_backgroundLayer.init()) {
         std::cerr << "Renderer: failed to init background layer\n";
         return false;
     }
 
-    if (!m_postProcess.init(windowWidth, windowHeight)) {
+    if (!m_postProcess.init(drawableWidth, drawableHeight)) {
         std::cerr << "Renderer: failed to init post-processing\n";
         return false;
     }
@@ -63,7 +63,7 @@ void Renderer::renderShadowPass(Scene& scene, const glm::vec3& lightDir) {
 
     scene.renderShadowCasters(m_shadowShader);
 
-    m_shadowMap.endCapture(m_windowWidth, m_windowHeight);
+    m_shadowMap.endCapture(m_drawableWidth, m_drawableHeight);
 }
 
 void Renderer::renderDepthPrePass(Scene& scene, Camera& camera) {
@@ -75,8 +75,8 @@ void Renderer::endFrame(float time, const glm::mat4& projection) {
 }
 
 void Renderer::onResize(int width, int height) {
-    m_windowWidth = width;
-    m_windowHeight = height;
+    m_drawableWidth = width;
+    m_drawableHeight = height;
     glViewport(0, 0, width, height);
     m_postProcess.onResize(width, height);
 }

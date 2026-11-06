@@ -63,6 +63,9 @@ private:
 
     int m_windowWidth = 1280;
     int m_windowHeight = 720;
+    // Pixels of the GL framebuffer; larger than the window on Retina.
+    int m_drawableWidth = 1280;
+    int m_drawableHeight = 720;
 
     bool m_running = false;
     float m_deltaTime = 0.0f;

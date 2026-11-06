@@ -12,6 +12,9 @@ void Camera::setup(const glm::vec3& position, const glm::vec3& target, const glm
 }
 
 void Camera::setPerspective(float fovDegrees, float aspect, float nearPlane, float farPlane) {
+    m_fov = fovDegrees;
+    m_near = nearPlane;
+    m_far = farPlane;
     m_projection = glm::perspective(glm::radians(fovDegrees), aspect, nearPlane, farPlane);
 }
 

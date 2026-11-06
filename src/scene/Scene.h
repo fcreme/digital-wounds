@@ -59,6 +59,10 @@ public:
     void bindShadowUniforms(ShadowMap& shadowMap);
 
     Camera& getCamera() { return m_camera; }
+    // Keeps the room camera correct after the window or display changes.
+    void onResize(int drawableWidth, int drawableHeight) {
+        m_camera.setAspect(static_cast<float>(drawableWidth) / static_cast<float>(drawableHeight));
+    }
     Player& getPlayer() { return m_player; }
     ParticleSystem& getParticleSystem() { return m_particles; }
     const RoomDef& getCurrentRoom() const { return m_currentRoom; }

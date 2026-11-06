@@ -19,7 +19,7 @@ public:
     Renderer(const Renderer&) = delete;
     Renderer& operator=(const Renderer&) = delete;
 
-    bool init(int windowWidth, int windowHeight);
+    bool init(int drawableWidth, int drawableHeight);
     void beginFrame();
     void renderBackground();
     void renderShadowPass(Scene& scene, const glm::vec3& lightDir);
@@ -28,8 +28,8 @@ public:
     void onResize(int width, int height);
     void shutdown();
 
-    int getWidth() const { return m_windowWidth; }
-    int getHeight() const { return m_windowHeight; }
+    int getWidth() const { return m_drawableWidth; }
+    int getHeight() const { return m_drawableHeight; }
 
     BackgroundLayer& getBackgroundLayer() { return m_backgroundLayer; }
     PostProcess& getPostProcess() { return m_postProcess; }
@@ -43,8 +43,8 @@ private:
     ShadowMap m_shadowMap;
     Shader m_shadowShader;
     Shader m_depthShader;
-    int m_windowWidth = 1280;
-    int m_windowHeight = 720;
+    int m_drawableWidth = 1280;
+    int m_drawableHeight = 720;
 };
 
 } // namespace dw
