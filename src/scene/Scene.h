@@ -15,6 +15,9 @@
 #include "world/Book.h"
 #include "world/Item.h"
 #include "world/Inventory.h"
+#include "world/ArtistCatalog.h"
+#include "world/PaintingData.h"
+#include "world/PaintingWall.h"
 
 #include <string>
 #include <memory>
@@ -97,6 +100,11 @@ private:
     std::vector<std::unique_ptr<PropInstance>> m_props;
     std::vector<TriggerZone> m_triggers;
     std::vector<PointLightDef> m_pointLights;
+
+    // Framed artist paintings (only rooms with a "paintings" field)
+    ArtistCatalog m_catalog;
+    std::vector<Painting> m_paintings;
+    PaintingWall m_paintingWall;
 
     // Depth pre-pass hidden geometry
     std::unique_ptr<Model> m_depthGeometry;

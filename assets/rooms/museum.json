@@ -5,6 +5,7 @@
     "depth_geometry": "",
     "first_person": true,
     "paintings": "assets/paintings/museum.json",
+    "painting_brightness": 2.0,
     "ambient_audio": "",
     "eye_height": 5.0,
     "player_spawn": [0.0, 0.0, 0.0],

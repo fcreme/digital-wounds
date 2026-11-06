@@ -1,0 +1,57 @@
+# Look in 8 directions from the centre, then each end of the hall (both side walls).
+# One 45 degree turn is 0.7854 rad = 524 mouse units at the default sensitivity.
+wait 1
+shot c0_plusz
+mouse -524 0
+wait 0.3
+shot c1_plusz_plusx
+mouse -524 0
+wait 0.3
+shot c2_plusx
+mouse -524 0
+wait 0.3
+shot c3_minusz_plusx
+mouse -524 0
+wait 0.3
+shot c4_minusz
+mouse -524 0
+wait 0.3
+shot c5_minusz_minusx
+mouse -524 0
+wait 0.3
+shot c6_minusx
+mouse -524 0
+wait 0.3
+shot c7_plusz_minusx
+mouse -524 0
+wait 0.3
+pos centre
+# Walk to the +z end (about z=28), then look at each side wall and back down the hall.
+key down W
+wait 4
+key up W
+wait 0.3
+pos far_plusz
+mouse -1047 0
+wait 0.3
+shot e1_plusx
+mouse -2094 0
+wait 0.3
+shot e1_minusx
+# From -x, a quarter turn back toward +x's opposite side (positive dx) faces -z face -z; walk to the other end (about z=-31).
+mouse 1047 0
+wait 0.3
+shot e1_down_hall
+key down W
+wait 8.8
+key up W
+wait 0.3
+pos far_minusz
+mouse -1047 0
+wait 0.3
+shot e2_minusx
+mouse -2094 0
+wait 0.3
+shot e2_plusx
+fps
+quit

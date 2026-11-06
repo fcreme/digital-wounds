@@ -82,6 +82,8 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
     m_worldItems.clear();
     m_nearItemIndex = -1;
     m_depthGeometry.reset();
+    m_paintingWall.shutdown();
+    m_paintings.clear();
 
     if (!loadRoomDef(roomDefPath, m_currentRoom)) {
         return false;
@@ -137,6 +139,14 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
         prop->itemIndex = propDef.itemIndex;
 
         m_props.push_back(std::move(prop));
+    }
+
+    // Artist paintings hung over the gallery's own. Any failure leaves the room as it was.
+    if (!m_currentRoom.paintingsPath.empty()) {
+        m_catalog.loadFromDirectory("assets/artists");
+        m_paintings = loadPaintings(m_currentRoom.paintingsPath, m_catalog);
+        m_paintingWall.setBrightness(m_currentRoom.paintingBrightness);
+        m_paintingWall.load(m_paintings, m_catalog);
     }
 
     // Load point lights from room definition
@@ -783,6 +793,9 @@ void Scene::renderObjects() {
         m_meshShader.setInt("uHasNormalMap", 0);
         m_player.render(m_meshShader);
     }
+
+    // Artist paintings hang over the gallery's own; they write depth and cast no shadow.
+    m_paintingWall.render(m_camera, -1, 0.0f);
 }
 
 void Scene::renderFMVOverlays() {
@@ -1135,6 +1148,7 @@ void Scene::shutdown() {
     m_triggers.clear();
     m_pointLights.clear();
     m_worldItems.clear();
+    m_paintingWall.shutdown();
 }
 
 } // namespace dw
