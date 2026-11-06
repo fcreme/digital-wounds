@@ -27,3 +27,6 @@ node_modules/
 
 # Test build
 build-test/
+
+# Python
+__pycache__/
