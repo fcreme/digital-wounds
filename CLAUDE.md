@@ -26,6 +26,15 @@ Or from Git Bash / cmd:
 /c/msys64/usr/bin/bash.exe -lc 'export PATH=/mingw64/bin:$PATH && cd /path/to/project && cmake -B build -G "MinGW Makefiles" && cmake --build build'
 ```
 
+## Build Instructions (macOS)
+```bash
+brew install cmake sdl2 assimp glm
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+./build/digital_wounds
+```
+Assets are copied into `build/` by a post-build step, so rebuild after changing anything in `assets/` or `props/`.
+
 ## Coding Conventions
 - C++17 standard
 - **Files:** snake_case (`background_layer.cpp`)

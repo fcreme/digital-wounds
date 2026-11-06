@@ -3,6 +3,7 @@
 in vec3 vWorldPos;
 in vec3 vNormal;
 in vec2 vTexCoord;
+in vec2 vTexCoordEmissive;
 in vec4 vFragPosLightSpace;
 in mat3 vTBN;
 
@@ -38,6 +39,8 @@ uniform float uRoughness;
 
 // Emissive
 uniform vec3 uEmissive;
+uniform sampler2D uEmissiveMap;
+uniform int uHasEmissiveMap;
 
 // Interaction highlight (0 = none, 1 = full glow)
 uniform float uHighlight;
@@ -143,7 +146,11 @@ void main() {
     }
 
     // Emissive contribution (adds directly, feeds bloom naturally)
-    result += uEmissive;
+    if (uHasEmissiveMap != 0) {
+        result += uEmissive * texture(uEmissiveMap, vTexCoordEmissive).rgb;
+    } else {
+        result += uEmissive;
+    }
 
     // Interaction highlight: emissive rim glow
     if (uHighlight > 0.0) {

@@ -748,6 +748,7 @@ void Scene::renderObjects() {
         } else {
             m_meshShader.setVec3("uMaterialColor", prop->materialColor.x, prop->materialColor.y, prop->materialColor.z);
             m_meshShader.setVec3("uEmissive", prop->emissive.x, prop->emissive.y, prop->emissive.z);
+            m_meshShader.setInt("uHasEmissiveMap", 0);
             m_meshShader.setInt("uHasNormalMap", 0);
 
             bool hasTex = prop->texture.getID() != 0;
@@ -766,6 +767,7 @@ void Scene::renderObjects() {
         m_meshShader.setVec3("uMaterialColor", 0.6f, 0.3f, 0.2f);
         m_meshShader.setInt("uHasTexture", 0);
         m_meshShader.setVec3("uEmissive", 0.0f, 0.0f, 0.0f);
+        m_meshShader.setInt("uHasEmissiveMap", 0);
         m_meshShader.setInt("uHasNormalMap", 0);
         m_player.render(m_meshShader);
     }

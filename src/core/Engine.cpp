@@ -8,7 +8,9 @@
 
 #include <glad/gl.h>
 #include <SDL.h>
+#include <filesystem>
 #include <iostream>
+#include <system_error>
 
 namespace dw {
 
@@ -22,6 +24,15 @@ bool Engine::init(const std::string& title, int width, int height) {
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER) != 0) {
         std::cerr << "SDL_Init failed: " << SDL_GetError() << "\n";
         return false;
+    }
+
+    // Assets and settings use relative paths and sit next to the executable,
+    // so work from there no matter where the game was launched from.
+    if (char* basePath = SDL_GetBasePath()) {
+        std::error_code ec;
+        std::filesystem::current_path(basePath, ec);
+        if (ec) std::cerr << "Could not switch to " << basePath << ": " << ec.message() << "\n";
+        SDL_free(basePath);
     }
 
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);

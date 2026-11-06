@@ -12,6 +12,7 @@ struct Vertex {
     glm::vec3 normal;
     glm::vec2 texcoord;
     glm::vec3 tangent{0.0f, 1.0f, 0.0f};
+    glm::vec2 texcoordEmissive{0.0f}; // glTF materials may give the emissive map its own UV set
 };
 
 class Mesh {
