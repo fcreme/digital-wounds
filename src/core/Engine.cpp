@@ -130,13 +130,14 @@ bool Engine::init(const std::string& title, int width, int height) {
     // Go straight into the gallery. TitleScreen is still supported: create it here
     // and leave m_gameState as TitleScreen to bring it back.
     m_running = true;
-    startGame();
 #ifdef DW_TEST_DRIVER
-    if (m_running && !m_scriptPath.empty()) {
+    // Load the script before startGame so the first room load does not grab the mouse.
+    if (!m_scriptPath.empty()) {
         m_driver = std::make_unique<TestDriver>();
         if (!m_driver->load(m_scriptPath)) return false;
     }
 #endif
+    startGame();
     return m_running;
 }
 

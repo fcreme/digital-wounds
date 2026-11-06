@@ -112,7 +112,8 @@ void TestDriver::run(const Command& cmd, InputManager* input, Engine* engine) {
         int dw = 0, dh = 0;
         SDL_GL_GetDrawableSize(engine->m_window, &dw, &dh);
         std::cout << "DRIVER sizes window=" << engine->m_windowWidth << "x" << engine->m_windowHeight
-                  << " drawable=" << dw << "x" << dh << "\n";
+                  << " drawable=" << dw << "x" << dh
+                  << " mouse_grab=" << (SDL_GetRelativeMouseMode() ? "on" : "off") << "\n";
     } else if (n == "fps" && engine) {
         double secs = (SDL_GetTicks() - m_startTicks) / 1000.0;
         std::cout << "DRIVER fps " << (secs > 0 ? m_frames / secs : 0.0) << " (" << m_frames
