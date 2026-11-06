@@ -106,6 +106,20 @@ legacy/                   # Original Three.js prototype (reference only)
 4. **FMV overlays** — Render animation loops (fog, water, fire) as video files
 5. **Room definitions** — JSON files specifying camera, background, collision, and props per room
 
+## Adding an artist
+
+Artists are data; adding one needs no code and no rebuild of the game, only of the assets copy.
+
+1. Make `assets/artists/<artist-id>/` holding `artist.json` and the design images (PNG, or any format stb_image reads).
+2. `artist.json` is `{"name", "description", "designs": [{"id", "title", "description", "image"}, ...]}`. Every `image` must exist in the folder.
+3. Limits, in bytes: name 28, description 120, design title 40, design description 200. Longer text is cut. The font draws only ASCII 32 to 122, and not `&`; other characters show as gaps. Accented names are not supported yet and must be done before the first artist who needs one.
+4. To show the artist, edit a painting in `assets/paintings/museum.json`: set its `artist` to the folder name and `design` to a design `id`. Pressing E on that painting opens that design.
+5. The game logs a warning at load for each problem (cut text, bad characters, missing image, unknown artist or design); a bad painting entry is skipped.
+
+`python3 tools/build_paintings.py --assign` rebuilds `museum.json` from scratch and overwrites every hand reassignment. Do not run it after editing paintings by hand.
+
+To check every painting: `python3 tools/build_paintings.py --driver-script`, build with `-DDW_TEST_DRIVER=ON`, then see `tests/check_every_painting.py`.
+
 ## License
 
 All rights reserved.

@@ -82,6 +82,8 @@ public:
     const std::vector<Painting>& debugPaintings() const { return m_paintings; }
     const ArtistView& debugArtistView() const { return m_artistView; }
     glm::vec3 debugLookDirection() const { return m_player.getLookDirection(); }
+    // Stands the player in front of a painting, looking at its centre. False if none fits.
+    bool debugAimAtPainting(const std::string& id);
 #endif
 
 private:

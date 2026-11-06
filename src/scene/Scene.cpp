@@ -22,6 +22,52 @@
 
 namespace dw {
 
+#ifdef DW_TEST_DRIVER
+bool Scene::debugAimAtPainting(const std::string& id) {
+    const Painting* target = nullptr;
+    for (const Painting& p : m_paintings)
+        if (p.id == id) target = &p;
+    if (!target) {
+        std::cerr << "DRIVER aim: no painting '" << id << "'\n";
+        return false;
+    }
+    // About 3 units out along the normal where it fits. A frame in a corner can sit
+    // outside the walkable area, so then slide sideways along the wall; failing that,
+    // take the farthest point on the normal that fits.
+    const float standOff = 3.0f, farthest = 15.0f, step = 0.1f, maxSlide = 2.0f;
+    const glm::vec3 n = target->normal, r = target->right;
+    auto spot = [&](float d, float slide) {
+        return glm::vec3(target->center.x + n.x * d + r.x * slide, 0.0f,
+                         target->center.z + n.z * d + r.z * slide);
+    };
+    auto fits = [&](const glm::vec3& v) { return m_player.debugCanStand(v.x, v.z); };
+    glm::vec3 pos(0.0f);
+    bool found = false;
+    for (float k = 0.0f; k <= maxSlide && !found; k += step) {
+        for (float slide : {k, -k}) {
+            if (fits(spot(standOff, slide))) { pos = spot(standOff, slide); found = true; break; }
+        }
+    }
+    for (float d = farthest; d >= 0.5f && !found; d -= step) {
+        if (fits(spot(d, 0.0f))) { pos = spot(d, 0.0f); found = true; }
+    }
+    if (!found) {
+        std::cerr << "DRIVER aim " << id << " unreachable\n";
+        return false;
+    }
+    const glm::vec3 to = target->center - glm::vec3(pos.x, m_currentRoom.eyeHeight, pos.z);
+    const float chosen = std::hypot(to.x, to.z);
+    const float yaw = std::atan2(to.x, to.z);
+    const float pitch = std::atan2(to.y, chosen);
+    if (std::fabs(pitch) > m_player.debugMaxPitch())
+        std::cerr << "DRIVER aim " << id << " pitch " << pitch << " exceeds the limit\n";
+    m_player.debugAim(pos, yaw, pitch);
+    std::cout << "DRIVER aim " << id << " standoff=" << chosen << " x=" << pos.x << " z=" << pos.z
+              << " pitch=" << pitch << "\n";
+    return true;
+}
+#endif
+
 namespace {
 // Scripted runs must not capture the mouse; real input spoils them.
 void setMouseGrab(SDL_bool grab) {

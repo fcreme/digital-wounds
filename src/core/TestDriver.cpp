@@ -40,7 +40,7 @@ bool TestDriver::load(const std::string& path) {
 }
 
 bool TestDriver::isObservation(const std::string& name) {
-    return name == "shot" || name == "pos" || name == "state" || name == "sizes" || name == "resize" || name == "fps";
+    return name == "shot" || name == "pos" || name == "state" || name == "aim" || name == "sizes" || name == "resize" || name == "fps";
 }
 
 void TestDriver::quit() {
@@ -128,6 +128,8 @@ void TestDriver::run(const Command& cmd, InputManager* input, Engine* engine) {
                   << " look=" << look.x << "," << look.y << "," << look.z << "\n";
     } else if (n == "resize" && engine) {
         SDL_SetWindowSize(engine->m_window, std::atoi(arg(0).c_str()), std::atoi(arg(1).c_str()));
+    } else if (n == "aim" && engine) {
+        engine->m_scene->debugAimAtPainting(arg(0));
     } else if (n == "state" && engine) {
         // near is the painting under the crosshair; page is 0-based like a design index.
         const Scene& sc = *engine->m_scene;

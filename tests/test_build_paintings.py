@@ -260,5 +260,31 @@ class PngRoundTrip(unittest.TestCase):
         )
 
 
+class DriverScript(unittest.TestCase):
+    PAINTINGS = [{"id": "r001", "artist": "a", "design": "y"}]
+    ARTISTS = [{"id": "a", "designs": ["x", "y"]}]
+
+    def test_every_painting_is_visited_and_expected_by_design_index(self):
+        script, expected = build_paintings.driver_script(self.PAINTINGS, self.ARTISTS)
+        self.assertIn("aim r001\n", script)
+        self.assertIn("state r001_open\n", script)
+        self.assertEqual(expected, "r001\ta\t1\n")
+
+    def test_checker_lists_mismatches_and_counts_passes(self):
+        sys.path.insert(0, os.path.join(ROOT, "tests"))
+        import check_every_painting as check
+
+        good = (
+            "DRIVER state r001_aimed near=r001(a#1) view=closed artist=none page=0\n"
+            "DRIVER state r001_open near=none view=open artist=a page=1\n"
+            "DRIVER state r001_closed near=r001(a#1) view=closed artist=none page=0\n"
+        )
+        self.assertEqual(check.check(good, "r001\ta\t1\n")[:2], (1, 1))
+        bad = good.replace("near=r001(a#1) view=closed artist=none page=0\nDRIVER state r001_open", "near=none view=closed artist=none page=0\nDRIVER state r001_open")
+        passed, total, failures = check.check(bad, "r001\ta\t1\n")
+        self.assertEqual((passed, total, len(failures)), (0, 1, 1))
+        self.assertIn("near=none", failures[0])
+
+
 if __name__ == "__main__":
     unittest.main()
