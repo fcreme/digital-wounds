@@ -46,25 +46,44 @@ if(WIN32)
     endforeach()
 endif()
 
-# --- Copy assets to build directory ---
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+# --- Copy assets and props to build directory on every build ---
+# A custom target (not POST_BUILD) so data-only edits reach the build
+# even when the executable does not relink.
+add_custom_target(copy_assets ALL
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/assets
         $<TARGET_FILE_DIR:${PROJECT_NAME}>/assets
-    COMMENT "Copying assets to build directory"
-)
-
-# --- Copy props (3D models) to build directory ---
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/props
         $<TARGET_FILE_DIR:${PROJECT_NAME}>/props
-    COMMENT "Copying props to build directory"
+    COMMENT "Copying assets and props to build directory"
 )
+add_dependencies(${PROJECT_NAME} copy_assets)
+
+# --- Scripted test driver (off in normal builds) ---
+option(DW_TEST_DRIVER "Build the scripted test driver (--script)" OFF)
+if(DW_TEST_DRIVER)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE DW_TEST_DRIVER)
+endif()
+
+# --- Unit tests (OpenGL-free sources only) ---
+enable_testing()
+add_executable(dw_tests
+    tests/test_main.cpp
+)
+target_include_directories(dw_tests PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/lib
+    ${CMAKE_SOURCE_DIR}/tests
+)
+add_test(NAME dw_tests COMMAND dw_tests)
 
 # --- Compiler warnings ---
 if(MSVC)
     target_compile_options(${PROJECT_NAME} PRIVATE /W4)
 else()
     target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+if(NOT MSVC)
+    target_compile_options(dw_tests PRIVATE -Wall -Wextra -Wpedantic)
 endif()

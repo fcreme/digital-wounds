@@ -24,3 +24,6 @@ node_modules/
 *.exe
 *.out
 *.app
+
+# Test build
+build-test/

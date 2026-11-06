@@ -5,6 +5,9 @@
 #include "audio/AudioManager.h"
 #include "ui/UIOverlay.h"
 #include "ui/TitleScreen.h"
+#ifdef DW_TEST_DRIVER
+#include "core/TestDriver.h"
+#endif
 
 #include <glad/gl.h>
 #include <SDL.h>
@@ -128,6 +131,12 @@ bool Engine::init(const std::string& title, int width, int height) {
     // and leave m_gameState as TitleScreen to bring it back.
     m_running = true;
     startGame();
+#ifdef DW_TEST_DRIVER
+    if (m_running && !m_scriptPath.empty()) {
+        m_driver = std::make_unique<TestDriver>();
+        if (!m_driver->load(m_scriptPath)) return false;
+    }
+#endif
     return m_running;
 }
 
@@ -145,8 +154,14 @@ void Engine::run() {
 
         m_inputManager->preUpdate();
         processEvents();
+#ifdef DW_TEST_DRIVER
+        if (m_driver) m_driver->beforeUpdate(*m_inputManager);
+#endif
         update(m_deltaTime);
         render();
+#ifdef DW_TEST_DRIVER
+        if (m_driver) m_driver->afterRender(*this);
+#endif
 
         SDL_GL_SwapWindow(m_window);
     }
@@ -155,6 +170,10 @@ void Engine::run() {
 void Engine::processEvents() {
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
+#ifdef DW_TEST_DRIVER
+        // Scripted runs ignore real input; stray events have spoiled runs before.
+        if (m_driver && event.type != SDL_QUIT) continue;
+#endif
         switch (event.type) {
             case SDL_QUIT:
                 m_running = false;

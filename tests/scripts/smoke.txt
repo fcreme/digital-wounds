@@ -1,0 +1,5 @@
+wait 1
+sizes
+shot smoke
+fps
+quit

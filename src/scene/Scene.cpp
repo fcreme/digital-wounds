@@ -8,6 +8,9 @@
 #include "ui/UIOverlay.h"
 
 #include <SDL.h>
+#ifdef DW_TEST_DRIVER
+#include "core/TestDriver.h"
+#endif
 #include <glad/gl.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -20,6 +23,14 @@
 namespace dw {
 
 namespace {
+// Scripted runs must not capture the mouse; real input spoils them.
+void setMouseGrab(SDL_bool grab) {
+#ifdef DW_TEST_DRIVER
+    if (g_testDriverActive) return;
+#endif
+    SDL_SetRelativeMouseMode(grab);
+}
+
 ParticleType parseParticleType(const std::string& s) {
     if (s == "fog") return ParticleType::Fog;
     if (s == "fireflies") return ParticleType::Fireflies;
@@ -259,7 +270,7 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
     }
 
     // Set mouse mode based on first-person flag
-    SDL_SetRelativeMouseMode(m_currentRoom.firstPerson ? SDL_TRUE : SDL_FALSE);
+    setMouseGrab(m_currentRoom.firstPerson ? SDL_TRUE : SDL_FALSE);
 
     // Load room-specific ambient audio
     if (m_audio && !m_currentRoom.ambientAudioPath.empty()) {
@@ -347,14 +358,14 @@ void Scene::update(float dt, const InputManager& input, Renderer& renderer, Audi
                 // Unpause
                 m_paused = false;
                 if (m_currentRoom.firstPerson)
-                    SDL_SetRelativeMouseMode(SDL_TRUE);
+                    setMouseGrab(SDL_TRUE);
             }
         } else {
             m_paused = true;
             m_pauseScreen = PauseScreen::Main;
             m_pauseSelection = 0;
             m_pauseAlpha = 0.0f;
-            SDL_SetRelativeMouseMode(SDL_FALSE);
+            setMouseGrab(SDL_FALSE);
         }
         return;
     }
@@ -371,7 +382,7 @@ void Scene::update(float dt, const InputManager& input, Renderer& renderer, Audi
                 if (m_pauseSelection == 0) {
                     m_paused = false;
                     if (m_currentRoom.firstPerson)
-                        SDL_SetRelativeMouseMode(SDL_TRUE);
+                        setMouseGrab(SDL_TRUE);
                 } else if (m_pauseSelection == 1) {
                     m_pauseScreen = PauseScreen::Settings;
                     m_settingsSelection = 0;
