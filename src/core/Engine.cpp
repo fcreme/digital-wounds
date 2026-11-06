@@ -124,16 +124,11 @@ bool Engine::init(const std::string& title, int width, int height) {
         return false;
     }
 
-    // Title screen (scene is deferred until player presses Enter)
-    m_titleScreen = std::make_unique<TitleScreen>();
-    if (!m_titleScreen->init(m_windowWidth, m_windowHeight)) {
-        std::cerr << "Failed to init title screen\n";
-        return false;
-    }
-    m_gameState = GameState::TitleScreen;
-
+    // Go straight into the gallery. TitleScreen is still supported: create it here
+    // and leave m_gameState as TitleScreen to bring it back.
     m_running = true;
-    return true;
+    startGame();
+    return m_running;
 }
 
 void Engine::run() {
@@ -273,9 +268,11 @@ void Engine::renderTitleScreen() {
 void Engine::startGame() {
     std::cout << "Starting game...\n";
 
-    // Shut down title screen
-    m_titleScreen->shutdown();
-    m_titleScreen.reset();
+    // Shut down title screen, if the game came through one
+    if (m_titleScreen) {
+        m_titleScreen->shutdown();
+        m_titleScreen.reset();
+    }
 
     // Create and init scene
     m_scene = std::make_unique<Scene>();
@@ -287,7 +284,7 @@ void Engine::startGame() {
 
     m_scene->setAudioManager(m_audio.get());
     m_scene->setSettings(m_settings);
-    m_scene->loadRoom("assets/rooms/hallway.json", *m_renderer);
+    m_scene->loadRoom("assets/rooms/museum.json", *m_renderer);
 
     m_gameState = GameState::Playing;
 }
