@@ -1,0 +1,42 @@
+{
+  "name": "Dark Ink Studio",
+  "description": "Where shadows become art. Specializing in blackwork, dark realism, and occult-inspired tattoo design.",
+  "designs": [
+    {
+      "id": "ravens-eye",
+      "title": "The Raven's Eye",
+      "description": "A blackwork piece inspired by Nordic mythology. The all-seeing eye of Odin, wrapped in raven feathers.",
+      "image": "ravens-eye.png"
+    },
+    {
+      "id": "bone-garden",
+      "title": "Bone Garden",
+      "description": "Floral skulls intertwined with thorned roses. A reminder that beauty grows from decay.",
+      "image": "bone-garden.png"
+    },
+    {
+      "id": "serpents-embrace",
+      "title": "Serpent's Embrace",
+      "description": "An ouroboros design with geometric dotwork patterns. The eternal cycle of creation and destruction.",
+      "image": "serpents-embrace.png"
+    },
+    {
+      "id": "shadow-forest",
+      "title": "Shadow Forest",
+      "description": "A sleeve concept featuring dead trees silhouetted against a full moon. Blackwork with negative space highlights.",
+      "image": "shadow-forest.png"
+    },
+    {
+      "id": "moth-sigil",
+      "title": "Moth Sigil",
+      "description": "A death's-head moth in solid black, its veins cut back to bare skin. A night visitor for the chest or throat.",
+      "image": "moth-sigil.png"
+    },
+    {
+      "id": "hollow-crown",
+      "title": "Hollow Crown",
+      "description": "A black crown set over a dark sun with a hollow eye. Heavy blackwork for those who rule nothing at all.",
+      "image": "hollow-crown.png"
+    }
+  ]
+}

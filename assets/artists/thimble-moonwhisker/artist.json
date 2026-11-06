@@ -1,0 +1,42 @@
+{
+  "name": "Thimble Moonwhisker",
+  "description": "Single-needle plants drawn the way a very small botanist would, one patient hairline at a time.",
+  "designs": [
+    {
+      "id": "fern-frond",
+      "title": "Fern Frond",
+      "description": "A curling frond with every leaflet ruled in by hand. Delicate enough for a wrist or a collarbone.",
+      "image": "fern-frond.png"
+    },
+    {
+      "id": "poppy-stem",
+      "title": "Poppy and Seed Head",
+      "description": "An open poppy beside its seed head, all thin line and no fill. Sits well along the forearm.",
+      "image": "poppy-stem.png"
+    },
+    {
+      "id": "foxglove-spire",
+      "title": "Foxglove Spire",
+      "description": "A tall spire of freckled bells, narrow and vertical, made for the ribs or the back of a calf.",
+      "image": "foxglove-spire.png"
+    },
+    {
+      "id": "moon-thistle",
+      "title": "Moon Thistle",
+      "description": "A prickly thistle in bloom against a thin crescent moon. Soft line, sharp plant.",
+      "image": "moon-thistle.png"
+    },
+    {
+      "id": "forest-caps",
+      "title": "Forest Caps",
+      "description": "Three spotted toadstools on a tuft of grass. A small woodland scene for the ankle.",
+      "image": "forest-caps.png"
+    },
+    {
+      "id": "wild-sprig-wreath",
+      "title": "Wild Sprig Wreath",
+      "description": "A round wreath of leaves and tiny blossoms around one quiet flower.",
+      "image": "wild-sprig-wreath.png"
+    }
+  ]
+}

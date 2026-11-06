@@ -1,0 +1,42 @@
+{
+  "name": "Professor Hatchwick Gloom",
+  "description": "Pen hatching, layer on layer, until it looks like an old book of bad news.",
+  "designs": [
+    {
+      "id": "hatched-skull",
+      "title": "Cracked Skull",
+      "description": "A skull built up in crossing pen strokes, with hollow black sockets and a cracked crown.",
+      "image": "hatched-skull.png"
+    },
+    {
+      "id": "hourglass-vigil",
+      "title": "Hourglass Vigil",
+      "description": "An hourglass in a beaded frame with most of its sand already down. A familiar reminder.",
+      "image": "hourglass-vigil.png"
+    },
+    {
+      "id": "guttering-candle",
+      "title": "Guttering Candle",
+      "description": "A dripping candle stub in a tin holder, almost finished, flame still going.",
+      "image": "guttering-candle.png"
+    },
+    {
+      "id": "nailed-coffin",
+      "title": "Nailed Coffin",
+      "description": "A six-sided coffin with hatched side, a solid cross and eight careful nails.",
+      "image": "nailed-coffin.png"
+    },
+    {
+      "id": "belfry-bat",
+      "title": "Belfry Bat",
+      "description": "A densely hatched bat with its wings spread above a small crescent moon.",
+      "image": "belfry-bat.png"
+    },
+    {
+      "id": "poison-bottle",
+      "title": "Poison Bottle",
+      "description": "A corked apothecary bottle with skull and bones on the label, bubbling slightly.",
+      "image": "poison-bottle.png"
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "name": "Captain Barnaby Inkbeard",
+  "description": "Thick lines, whip shading and solid black, in the old sailor manner. Holds up from across the harbour.",
+  "designs": [
+    {
+      "id": "swallow",
+      "title": "Homeward Swallow",
+      "description": "A swooping swallow, the old mark of a sailor due back home. Bold wings and four small stars.",
+      "image": "swallow.png"
+    },
+    {
+      "id": "lucky-anchor",
+      "title": "Rope and Anchor",
+      "description": "A heavy anchor wrapped in rope, with whip-shaded arms. The steady classic for the upper arm.",
+      "image": "lucky-anchor.png"
+    },
+    {
+      "id": "dagger-heart",
+      "title": "Dagger Through the Heart",
+      "description": "A dagger driven through a whip-shaded heart with three drops falling. Loyal, dramatic, a bit much.",
+      "image": "dagger-heart.png"
+    },
+    {
+      "id": "bold-rose",
+      "title": "Old Harbour Rose",
+      "description": "A round traditional rose with half-black leaves. Fills a shoulder cap or the back of a hand.",
+      "image": "bold-rose.png"
+    },
+    {
+      "id": "lucky-horseshoe",
+      "title": "Lucky Horseshoe",
+      "description": "A nailed horseshoe holding a black star, for those who need the odds on their side.",
+      "image": "lucky-horseshoe.png"
+    },
+    {
+      "id": "rattler-coil",
+      "title": "Rattler Coil",
+      "description": "A diamond-backed snake coiling up to a blunt black head, tail rattling behind it.",
+      "image": "rattler-coil.png"
+    }
+  ]
+}

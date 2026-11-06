@@ -1,0 +1,36 @@
+{
+  "name": "Bramble Knotwright the Third",
+  "description": "Bands that go over, under and over again, and never end. The first two Knotwrights are still looking for the end.",
+  "designs": [
+    {
+      "id": "square-knot",
+      "title": "Square Plait",
+      "description": "A square panel of unbroken plaitwork, every crossing over then under, with four corner studs.",
+      "image": "square-knot.png"
+    },
+    {
+      "id": "long-panel",
+      "title": "Long Panel",
+      "description": "A tall knotted band between two rules, sized for a forearm or the length of a spine.",
+      "image": "long-panel.png"
+    },
+    {
+      "id": "round-knot",
+      "title": "Round Knot",
+      "description": "Two waving bands laced into a ring around an eight-pointed star. Good on a shoulder cap.",
+      "image": "round-knot.png"
+    },
+    {
+      "id": "triquetra-ring",
+      "title": "Three-Loop Knot",
+      "description": "A three-lobed knot with a ring laced through its loops and a star at the very middle.",
+      "image": "triquetra-ring.png"
+    },
+    {
+      "id": "triskele-spiral",
+      "title": "Triple Spiral",
+      "description": "Three spirals uncoiling from one point inside a dotted ring. Very old idea, still good.",
+      "image": "triskele-spiral.png"
+    }
+  ]
+}

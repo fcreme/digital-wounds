@@ -3,6 +3,7 @@
 Run from the repo root: python3 -m unittest tests/test_build_paintings.py
 """
 
+import json
 import os
 import sys
 import unittest
@@ -150,6 +151,105 @@ class MarkedRects(unittest.TestCase):
                 self.assertLessEqual(
                     min(x, y) * 1024, 2.01, "%s and %s" % (a["id"], b["id"])
                 )
+
+
+class Assignment(unittest.TestCase):
+    """The assignment over the real rectangles, with a catalog made up here."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.placed = build_paintings.placed_rects()
+        count = len(cls.placed)
+        # 20 artists with 5 or 6 designs each, as the real catalog has.
+        sizes = [count // 20 + (1 if i < count % 20 else 0) for i in range(20)]
+        cls.artists = [
+            {"id": "a%02d" % i, "designs": ["d%d" % d for d in range(size)]}
+            for i, size in enumerate(sizes)
+        ]
+        cls.paintings = build_paintings.assign_paintings(cls.placed, cls.artists)
+
+    def test_every_rect_gets_exactly_one_design(self):
+        self.assertEqual(
+            sorted(p["id"] for p in self.paintings),
+            sorted(r["id"] for r in self.placed),
+        )
+        used = sorted((p["artist"], p["design"]) for p in self.paintings)
+        everything = sorted(
+            (a["id"], d) for a in self.artists for d in a["designs"]
+        )
+        self.assertEqual(used, everything)
+
+    def test_painting_keeps_its_rect_placement(self):
+        placed = {r["id"]: r for r in self.placed}
+        for painting in self.paintings:
+            for key in ("center", "right", "normal", "size"):
+                self.assertEqual(painting[key], placed[painting["id"]][key])
+
+    def test_same_artist_not_side_by_side(self):
+        # Distance is between frame edges, so that a wide frame's next-door
+        # neighbour counts even when their centres are more than 4 units apart.
+        for i, a in enumerate(self.paintings):
+            for b in self.paintings[i + 1 :]:
+                if build_paintings.frames_near(a, b):
+                    self.assertNotEqual(a["artist"], b["artist"], (a["id"], b["id"]))
+
+    def test_frames_near_measures_edges_on_the_same_wall_only(self):
+        def frame(x, z=0.0, width=2.0, normal=(0.0, 0.0, 1.0)):
+            return {
+                "center": [x, 5.0, z],
+                "right": [normal[2], 0.0, -normal[0]],
+                "normal": list(normal),
+                "size": [width, 2.0],
+            }
+
+        # Centres 7 apart, edges 3 apart.
+        self.assertTrue(build_paintings.frames_near(frame(0.0, width=8.0), frame(7.0)))
+        self.assertFalse(build_paintings.frames_near(frame(0.0), frame(7.0)))
+        # Opposite walls, facing each other across the hall.
+        self.assertFalse(
+            build_paintings.frames_near(
+                frame(0.0), frame(0.0, z=5.0, normal=(0.0, 0.0, -1.0))
+            )
+        )
+        # Same direction, but set back on another plane.
+        self.assertFalse(build_paintings.frames_near(frame(0.0), frame(0.0, z=3.0)))
+
+    def test_assignment_is_deterministic(self):
+        self.assertEqual(
+            build_paintings.assign_paintings(self.placed, self.artists), self.paintings
+        )
+
+    def test_each_artist_appears_on_at_least_two_walls(self):
+        walls = {}
+        for painting in self.paintings:
+            walls.setdefault(painting["artist"], set()).add(
+                build_paintings.wall_key(painting)
+            )
+        self.assertEqual(len(walls), 20)
+        for artist, seen in walls.items():
+            self.assertGreaterEqual(len(seen), 2, artist)
+
+    def test_too_few_designs_is_an_error(self):
+        with self.assertRaises(ValueError):
+            build_paintings.assign_paintings(
+                self.placed, [{"id": "a", "designs": ["d"]}]
+            )
+
+
+class RealAssets(unittest.TestCase):
+    """The committed museum.json is what --assign produces from committed artists."""
+
+    def test_museum_json_matches_a_fresh_assignment(self):
+        with open(build_paintings.PAINTINGS_PATH) as f:
+            committed = json.load(f)["paintings"]
+        fresh = build_paintings.assign_paintings(
+            build_paintings.placed_rects(), build_paintings.load_artists()
+        )
+        self.assertEqual(committed, fresh)
+
+    def test_room_names_the_paintings_file(self):
+        with open(os.path.join(ROOT, "assets", "rooms", "museum.json")) as f:
+            self.assertEqual(json.load(f)["paintings"], "assets/paintings/museum.json")
 
 
 class PngRoundTrip(unittest.TestCase):

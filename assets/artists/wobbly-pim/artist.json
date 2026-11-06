@@ -1,0 +1,42 @@
+{
+  "name": "Wobbly Pim Scribblesworth",
+  "description": "Wonky marker drawings of unhappy things. Every shaky line is on purpose, or at least he says so.",
+  "designs": [
+    {
+      "id": "sad-ghost",
+      "title": "Sad Ghost",
+      "description": "A ghost with crossed-out eyes and a single tear. Going through something. Fits behind a knee.",
+      "image": "sad-ghost.png"
+    },
+    {
+      "id": "grumpy-cat",
+      "title": "Furious Cat",
+      "description": "A cat who has just been told something and does not agree with it. Very good on a shin.",
+      "image": "grumpy-cat.png"
+    },
+    {
+      "id": "happy-cactus",
+      "title": "Pleased Cactus",
+      "description": "A small potted cactus with a small smile. Scribbled pot, flower on top, no idea why it is happy.",
+      "image": "happy-cactus.png"
+    },
+    {
+      "id": "toothy-flower",
+      "title": "Toothy Flower",
+      "description": "A cheerful daisy with far too many teeth. Do not water it after dark.",
+      "image": "toothy-flower.png"
+    },
+    {
+      "id": "little-bomb",
+      "title": "Little Bomb",
+      "description": "A scribbled round bomb, fuse lit, looking delighted about it.",
+      "image": "little-bomb.png"
+    },
+    {
+      "id": "speedy-snail",
+      "title": "Speedy Snail",
+      "description": "A snail at full speed, with motion lines to prove it. For someone in no hurry at all.",
+      "image": "speedy-snail.png"
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "name": "The Koi Whisperer of Mu",
+  "description": "Swept black bars, overlapping scales and curling water. Listens to fish, and reports they have opinions.",
+  "designs": [
+    {
+      "id": "koi-ascending",
+      "title": "Koi Ascending",
+      "description": "A scaled koi climbing upstream between swept black bars, with little rings of water around it.",
+      "image": "koi-ascending.png"
+    },
+    {
+      "id": "peony-bloom",
+      "title": "Peony in Full Bloom",
+      "description": "A wide peony of many ruffled layers on dark leaves. Fills a shoulder or the outer thigh.",
+      "image": "peony-bloom.png"
+    },
+    {
+      "id": "great-wave",
+      "title": "Rising Wave",
+      "description": "A curling wave breaking over a sea of scale pattern, spray flying under a crescent moon.",
+      "image": "great-wave.png"
+    },
+    {
+      "id": "sakura-bough",
+      "title": "Blossom Bough",
+      "description": "A black branch heavy with notched blossoms and a few loose petals on their way down.",
+      "image": "sakura-bough.png"
+    },
+    {
+      "id": "cloud-knot",
+      "title": "Moon and Clouds",
+      "description": "Three curling cloud banks sliding across a large stippled moon. Calm work for the upper arm.",
+      "image": "cloud-knot.png"
+    },
+    {
+      "id": "seigaiha-fan",
+      "title": "Wave-Pattern Fan",
+      "description": "An open folding fan patterned with overlapping wave scales, its tassel trailing below.",
+      "image": "seigaiha-fan.png"
+    }
+  ]
+}

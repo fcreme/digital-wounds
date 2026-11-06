@@ -1,0 +1,42 @@
+{
+  "name": "Beetlebrow Mothwick",
+  "description": "Insects stippled like plates from an old field guide. Knows every one by name and calls them all darling.",
+  "designs": [
+    {
+      "id": "stag-beetle",
+      "title": "Stag Beetle",
+      "description": "A stag beetle pinned flat like a specimen, stipple shaded with solid black antlers.",
+      "image": "stag-beetle.png"
+    },
+    {
+      "id": "hawk-moth",
+      "title": "Hawk Moth",
+      "description": "A broad-winged moth with eyespots, each wing darkening in dots towards its edge.",
+      "image": "hawk-moth.png"
+    },
+    {
+      "id": "honey-bee",
+      "title": "Honey Bee",
+      "description": "A honey bee from above, with a furred thorax, veined wings and three solid bands.",
+      "image": "honey-bee.png"
+    },
+    {
+      "id": "orb-spider",
+      "title": "Orb Spider",
+      "description": "A stippled spider marked with a pale star, sitting right in the middle of her web.",
+      "image": "orb-spider.png"
+    },
+    {
+      "id": "plate-dragonfly",
+      "title": "Field Guide Dragonfly",
+      "description": "A dragonfly with every wing cell ruled in, its long body drawn segment by segment.",
+      "image": "plate-dragonfly.png"
+    },
+    {
+      "id": "swallowtail",
+      "title": "Swallowtail",
+      "description": "A swallowtail butterfly with stippled veined wings and two long tails trailing below.",
+      "image": "swallowtail.png"
+    }
+  ]
+}

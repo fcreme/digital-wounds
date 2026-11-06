@@ -4,11 +4,16 @@
 python3 tools/build_paintings.py --overlay out.png
     writes the atlas with every rectangle outlined and numbered. Add
     --crop X0 Y0 X1 Y1, --zoom N and --grid N to check one region up close.
+
+python3 tools/build_paintings.py --assign
+    gives every rectangle one design from assets/artists and writes
+    assets/paintings/museum.json. Output is identical between runs.
 """
 
 import argparse
 import json
 import os
+import random
 import struct
 import sys
 import zlib
@@ -20,6 +25,8 @@ import glb_walls  # noqa: E402
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GLB_PATH = os.path.join(ROOT, "props", "the_picture_gallery_low_poly__vr.glb")
 RECTS_PATH = os.path.join(ROOT, "tools", "data", "painting_rects.json")
+ARTISTS_DIR = os.path.join(ROOT, "assets", "artists")
+PAINTINGS_PATH = os.path.join(ROOT, "assets", "paintings", "museum.json")
 
 WALL_OFFSET = 0.03
 NORMAL_PROBE = 0.3
@@ -28,6 +35,11 @@ UV_MATCH = 1e-4
 PLANE_MIN_DOT = 0.99
 PLANE_MAX_GAP = 0.05
 CONTAINMENT_SAMPLES = 8
+
+ASSIGN_SEED = 20261106
+ASSIGN_ATTEMPTS = 200
+NEIGHBOUR_DISTANCE = 4.0
+SAME_WALL_MAX_GAP = 1.0
 
 
 def _group_walls(triangles):
@@ -167,6 +179,112 @@ def rect_to_world(rect, triangles):
 def load_rects(path=RECTS_PATH):
     with open(path) as f:
         return json.load(f)["rects"]
+
+
+def placed_rects(rects=None):
+    """Every marked rectangle with its id and world placement."""
+    triangles = glb_walls.load_wall_triangles(GLB_PATH)
+    return [
+        dict(id=rect["id"], **rect_to_world(rect, triangles))
+        for rect in (load_rects() if rects is None else rects)
+    ]
+
+
+# --- Assignment -----------------------------------------------------------
+
+
+def load_artists(directory=ARTISTS_DIR):
+    """[{"id", "designs": [design id, ...]}], sorted by id."""
+    artists = []
+    for name in sorted(os.listdir(directory)):
+        path = os.path.join(directory, name, "artist.json")
+        if os.path.exists(path):
+            with open(path) as f:
+                designs = json.load(f)["designs"]
+            artists.append({"id": name, "designs": [d["id"] for d in designs]})
+    return artists
+
+
+def _dot(a, b):
+    return sum(a[k] * b[k] for k in range(3))
+
+
+def _plane(frame):
+    return _dot(frame["center"], frame["normal"])
+
+
+def wall_key(frame):
+    """Names the wall a frame hangs on: its facing, and its plane to the unit."""
+    return (tuple(frame["normal"]), round(_plane(frame)))
+
+
+def frames_near(a, b):
+    """True when two frames share a wall and their edges are within 4 units."""
+    if a["normal"] != b["normal"] or abs(_plane(a) - _plane(b)) >= SAME_WALL_MAX_GAP:
+        return False
+    across = abs(_dot(a["center"], a["right"]) - _dot(b["center"], a["right"]))
+    high = abs(a["center"][1] - b["center"][1])
+    gap_x = max(0.0, across - (a["size"][0] + b["size"][0]) / 2)
+    gap_y = max(0.0, high - (a["size"][1] + b["size"][1]) / 2)
+    return (gap_x * gap_x + gap_y * gap_y) ** 0.5 <= NEIGHBOUR_DISTANCE
+
+
+def _try_assign(placed, artists, rng):
+    """Greedy pass: the artist with most designs left who is not used nearby.
+
+    Ties go to the artist with least on this wall, so works spread around the
+    hall. Returns None when some frame has no artist left to take.
+    """
+    remaining = {a["id"]: list(a["designs"]) for a in artists}
+    for designs in remaining.values():
+        rng.shuffle(designs)
+    order = list(placed)
+    rng.shuffle(order)
+    on_wall = {}
+    paintings = []
+    for frame in order:
+        banned = {p["artist"] for p in paintings if frames_near(frame, p)}
+        wall = wall_key(frame)
+        candidates = [a for a in remaining if remaining[a] and a not in banned]
+        if not candidates:
+            return None
+        rng.shuffle(candidates)
+        artist = max(
+            candidates,
+            key=lambda a: (len(remaining[a]), -on_wall.get((a, wall), 0)),
+        )
+        on_wall[(artist, wall)] = on_wall.get((artist, wall), 0) + 1
+        paintings.append(dict(frame, artist=artist, design=remaining[artist].pop()))
+
+    walls = {}
+    for painting in paintings:
+        walls.setdefault(painting["artist"], set()).add(wall_key(painting))
+    if any(len(seen) < 2 for seen in walls.values()):
+        return None
+    return sorted(paintings, key=lambda p: p["id"])
+
+
+def assign_paintings(placed, artists, seed=ASSIGN_SEED):
+    """One design per frame, using each design once. Same input, same output."""
+    designs = sum(len(a["designs"]) for a in artists)
+    if designs != len(placed):
+        raise ValueError("%d designs for %d frames" % (designs, len(placed)))
+    rng = random.Random(seed)
+    for _ in range(ASSIGN_ATTEMPTS):
+        paintings = _try_assign(placed, artists, rng)
+        if paintings is not None:
+            return paintings
+    raise ValueError("no valid assignment in %d attempts" % ASSIGN_ATTEMPTS)
+
+
+def write_paintings(paintings, path=PAINTINGS_PATH):
+    keys = ("id", "center", "right", "normal", "size", "artist", "design")
+    lines = [
+        "    " + json.dumps({key: painting[key] for key in keys}) for painting in paintings
+    ]
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w") as f:
+        f.write('{\n  "paintings": [\n' + ",\n".join(lines) + "\n  ]\n}\n")
 
 
 # --- PNG, standard library only -------------------------------------------
@@ -341,12 +459,20 @@ def render_overlay(rects, crop=None, zoom=1, grid=0, label_scale=None):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--overlay", metavar="OUT.png", required=True)
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--overlay", metavar="OUT.png")
+    mode.add_argument("--assign", action="store_true")
     parser.add_argument("--crop", nargs=4, type=int, metavar=("X0", "Y0", "X1", "Y1"))
     parser.add_argument("--zoom", type=int, default=1)
     parser.add_argument("--grid", type=int, default=0)
     parser.add_argument("--rects", default=RECTS_PATH)
     args = parser.parse_args(argv)
+
+    if args.assign:
+        paintings = assign_paintings(placed_rects(load_rects(args.rects)), load_artists())
+        write_paintings(paintings)
+        print("assigned %d paintings to %s" % (len(paintings), PAINTINGS_PATH))
+        return 0
 
     rects = load_rects(args.rects) if os.path.exists(args.rects) else []
     rows = render_overlay(rects, args.crop, args.zoom, args.grid)

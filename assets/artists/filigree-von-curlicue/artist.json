@@ -1,0 +1,42 @@
+{
+  "name": "Filigree Von Curlicue",
+  "description": "Mirrored scrollwork, lace and wrought iron. Nothing here is plain, and nothing has ever been plain.",
+  "designs": [
+    {
+      "id": "damask-medallion",
+      "title": "Damask Medallion",
+      "description": "Heart-shaped scrolls stacked inside a double-lined medallion. Symmetrical work for the sternum.",
+      "image": "damask-medallion.png"
+    },
+    {
+      "id": "lace-collar",
+      "title": "Lace Collar",
+      "description": "A necklace of lace with spoked rosettes and a single pendant, drawn to follow the collarbone.",
+      "image": "lace-collar.png"
+    },
+    {
+      "id": "empty-cartouche",
+      "title": "Empty Cartouche",
+      "description": "A baroque frame of curling scrolls, left empty on purpose. What goes inside is your problem.",
+      "image": "empty-cartouche.png"
+    },
+    {
+      "id": "chandelier-drop",
+      "title": "Chandelier Drop",
+      "description": "A ballroom chandelier with six candles and a beaded swag. Hangs well from the sternum down.",
+      "image": "chandelier-drop.png"
+    },
+    {
+      "id": "wrought-gate",
+      "title": "Wrought Gate",
+      "description": "An arched iron gate full of paired scrolls under a crown of leaves. Good on the forearm.",
+      "image": "wrought-gate.png"
+    },
+    {
+      "id": "spade-finial",
+      "title": "Spade Finial",
+      "description": "A tall spade outline filled with scrollwork, like the top of an old garden railing.",
+      "image": "spade-finial.png"
+    }
+  ]
+}

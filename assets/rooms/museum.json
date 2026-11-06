@@ -4,6 +4,7 @@
     "collision": "",
     "depth_geometry": "",
     "first_person": true,
+    "paintings": "assets/paintings/museum.json",
     "ambient_audio": "",
     "eye_height": 5.0,
     "player_spawn": [0.0, 0.0, 0.0],

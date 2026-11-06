@@ -1,0 +1,36 @@
+{
+  "name": "Polygonzo the Faceted",
+  "description": "Refuses to acknowledge curves. Animals and gems cut into triangles of hatching, dots and solid black.",
+  "designs": [
+    {
+      "id": "fox-mask",
+      "title": "Fox Mask",
+      "description": "A fox's face in folded triangles, every facet with its own shading. Good on the thigh.",
+      "image": "fox-mask.png"
+    },
+    {
+      "id": "wolf-mask",
+      "title": "Wolf Mask",
+      "description": "A long-jawed wolf in hard facets of black, hatch and stipple, staring straight ahead.",
+      "image": "wolf-mask.png"
+    },
+    {
+      "id": "owl-mask",
+      "title": "Owl Mask",
+      "description": "An owl made of angles, with two eight-sided eyes that seem to follow you down the hall.",
+      "image": "owl-mask.png"
+    },
+    {
+      "id": "cut-diamond",
+      "title": "Cut Diamond",
+      "description": "A brilliant-cut gem seen side on, each facet shaded differently, with a few small glints.",
+      "image": "cut-diamond.png"
+    },
+    {
+      "id": "icosa-cage",
+      "title": "Twenty Sides",
+      "description": "A many-sided solid with its faces in black, hatch and dots. Pure geometry, no animals harmed.",
+      "image": "icosa-cage.png"
+    }
+  ]
+}

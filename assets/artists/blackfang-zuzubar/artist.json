@@ -1,0 +1,36 @@
+{
+  "name": "Blackfang Zuzubar",
+  "description": "Solid black shapes with no outline and no mercy. Every curve ends in a point.",
+  "designs": [
+    {
+      "id": "tribal-sun",
+      "title": "Swirling Sun",
+      "description": "Ten curved blades spinning around a starred ring. Solid black and readable from far away.",
+      "image": "tribal-sun.png"
+    },
+    {
+      "id": "hook-spiral",
+      "title": "Hook Spiral",
+      "description": "One thick spiral tapering to nothing, barbed along its outer edge. Wraps a shoulder well.",
+      "image": "hook-spiral.png"
+    },
+    {
+      "id": "fang-heart",
+      "title": "Fang Heart",
+      "description": "A heart built from two fanged curves that nearly meet. Mirrored, sharp and heavy.",
+      "image": "fang-heart.png"
+    },
+    {
+      "id": "twin-flames",
+      "title": "Twin Flames",
+      "description": "Mirrored black flames rising from a single point. Made for the centre of the back.",
+      "image": "twin-flames.png"
+    },
+    {
+      "id": "manta-glide",
+      "title": "Manta Glide",
+      "description": "A manta ray drawn as sweeping blades with cut-out highlights and a long thin tail.",
+      "image": "manta-glide.png"
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "name": "Snipsy the Paper Goblin",
+  "description": "Black panels with bitten edges and little cut-out creatures, as if done with stolen nail scissors.",
+  "designs": [
+    {
+      "id": "folk-bird",
+      "title": "Folk Bird",
+      "description": "A plump bird cut out of a round black panel, with flowers and leaves around it.",
+      "image": "folk-bird.png"
+    },
+    {
+      "id": "tree-of-life",
+      "title": "Tree of Life",
+      "description": "A branching tree full of flowers under a scalloped arch, two small birds at its roots.",
+      "image": "tree-of-life.png"
+    },
+    {
+      "id": "marigold-skull",
+      "title": "Marigold Skull",
+      "description": "A cut-paper skull with flowers for eyes, in a round panel with a ring of marigolds.",
+      "image": "marigold-skull.png"
+    },
+    {
+      "id": "twin-deer",
+      "title": "Twin Deer",
+      "description": "Two spotted deer facing each other in a stamp-edged panel, antlers nearly touching.",
+      "image": "twin-deer.png"
+    },
+    {
+      "id": "sun-and-moon",
+      "title": "Sun and Moon",
+      "description": "A round panel split into day and night, with a smiling half-sun and a moon among stars.",
+      "image": "sun-and-moon.png"
+    },
+    {
+      "id": "paper-lantern",
+      "title": "Paper Lantern",
+      "description": "A round black lantern with cut flowers and ribs, and a fringe of tassels underneath.",
+      "image": "paper-lantern.png"
+    }
+  ]
+}

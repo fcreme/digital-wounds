@@ -2,6 +2,11 @@
 #include "world/PaintingData.h"
 #include "world/ArtistCatalog.h"
 
+#include <nlohmann/json.hpp>
+#include <stb_image.h>
+
+#include <fstream>
+
 #ifndef DW_TEST_FIXTURES
 #error "DW_TEST_FIXTURES must be defined by CMake"
 #endif
@@ -84,4 +89,44 @@ TEST(missingFileReturnsEmpty) {
 TEST(wrongTopLevelTypeReturnsEmpty) {
     ArtistCatalog c;
     CHECK(loadPaintings(PFIX + "/wrong-type.json", c).empty());
+}
+
+// The generated stand-ins, as the game will load them.
+TEST(realArtistsAndPaintingsLoadCleanly) {
+    const std::string root = std::string(DW_TEST_FIXTURES) + "/../..";
+    ArtistCatalog c;
+    CHECK(c.loadFromDirectory(root + "/assets/artists") == 20);
+    CHECK(c.warnings().empty());
+
+    std::ifstream rectFile(root + "/tools/data/painting_rects.json");
+    const nlohmann::json rects = nlohmann::json::parse(rectFile, nullptr, false);
+    CHECK(rects.is_object());
+    if (!rects.is_object()) return;
+    const size_t rectCount = rects["rects"].size();
+    CHECK(rectCount == 114);
+
+    std::vector<Painting> v = loadPaintings(root + "/assets/paintings/museum.json", c);
+    CHECK(v.size() == rectCount);
+
+    size_t designs = 0;
+    for (const Artist& a : c.artists()) designs += a.designs.size();
+    CHECK(designs == rectCount);
+}
+
+TEST(realDesignImagesDecodeOnPaper) {
+    const std::string root = std::string(DW_TEST_FIXTURES) + "/../..";
+    ArtistCatalog c;
+    CHECK(c.loadFromDirectory(root + "/assets/artists") == 20);
+    for (const Artist& a : c.artists()) {
+        for (const ArtistDesign& d : a.designs) {
+            int w = 0, h = 0, channels = 0;
+            unsigned char* pixels = stbi_load(d.imagePath.c_str(), &w, &h, &channels, 4);
+            CHECK(pixels != nullptr);
+            if (!pixels) continue;
+            CHECK(w == 1024 && h == 1024);
+            // Corner pixel is the paper colour #E6DCC8.
+            CHECK(pixels[0] == 0xE6 && pixels[1] == 0xDC && pixels[2] == 0xC8 && pixels[3] == 255);
+            stbi_image_free(pixels);
+        }
+    }
 }

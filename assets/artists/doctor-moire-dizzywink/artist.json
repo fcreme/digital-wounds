@@ -1,0 +1,36 @@
+{
+  "name": "Doctor Moire Dizzywink",
+  "description": "Black and white shapes that refuse to hold still. Not recommended for the seasick.",
+  "designs": [
+    {
+      "id": "stripe-sphere",
+      "title": "Striped Sphere",
+      "description": "A globe made only of curved bands that bulge towards you. Sits best on a round shoulder.",
+      "image": "stripe-sphere.png"
+    },
+    {
+      "id": "checker-bulge",
+      "title": "Checker Bulge",
+      "description": "A checkerboard swelling out of its square frame. Works on a kneecap for obvious reasons.",
+      "image": "checker-bulge.png"
+    },
+    {
+      "id": "hypnotic-spiral",
+      "title": "Hypnotic Spiral",
+      "description": "Two black arms winding into a point. Look at it for a while. You are getting sleepy.",
+      "image": "hypnotic-spiral.png"
+    },
+    {
+      "id": "ripple-rings",
+      "title": "Ripple Rings",
+      "description": "Concentric rings that wobble as if something was dropped into them from far above.",
+      "image": "ripple-rings.png"
+    },
+    {
+      "id": "nested-tunnel",
+      "title": "Nested Tunnel",
+      "description": "Black and white squares twisting down a tunnel with no floor. A good one for the palm.",
+      "image": "nested-tunnel.png"
+    }
+  ]
+}
