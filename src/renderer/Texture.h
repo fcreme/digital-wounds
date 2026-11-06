@@ -15,7 +15,8 @@ public:
     Texture(Texture&& other) noexcept;
     Texture& operator=(Texture&& other) noexcept;
 
-    bool load(const std::string& path, bool sRGB = false);
+    // Flips by default for OpenGL's bottom-up UVs; UI quads are top-down and need flipVertically = false.
+    bool load(const std::string& path, bool sRGB = false, bool flipVertically = true);
     bool loadFromMemory(const unsigned char* data, int length, bool sRGB = false);
     void bind(GLenum unit = GL_TEXTURE0) const;
     void destroy();

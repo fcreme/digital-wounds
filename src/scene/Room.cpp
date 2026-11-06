@@ -45,6 +45,9 @@ bool loadRoomDef(const std::string& path, RoomDef& out) {
         return false;
     }
 
+    // The caller reuses the same RoomDef between rooms, and the lists below only append.
+    out = RoomDef{};
+
     out.name = getOr<std::string>(j, "name", "");
     out.backgroundPath = getOr<std::string>(j, "background", "");
     out.collisionPath = getOr<std::string>(j, "collision", "");

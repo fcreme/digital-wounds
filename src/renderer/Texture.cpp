@@ -21,11 +21,11 @@ Texture& Texture::operator=(Texture&& other) noexcept {
     return *this;
 }
 
-bool Texture::load(const std::string& path, bool sRGB) {
+bool Texture::load(const std::string& path, bool sRGB, bool flipVertically) {
     destroy();
 
     int channels;
-    stbi_set_flip_vertically_on_load(true);
+    stbi_set_flip_vertically_on_load(flipVertically);
     unsigned char* data = stbi_load(path.c_str(), &m_width, &m_height, &channels, 4);
     if (!data) {
         std::cerr << "Texture: failed to load: " << path << "\n";
