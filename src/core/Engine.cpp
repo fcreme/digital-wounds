@@ -8,7 +8,9 @@
 
 #include <glad/gl.h>
 #include <SDL.h>
+#include <filesystem>
 #include <iostream>
+#include <system_error>
 
 namespace dw {
 
@@ -22,6 +24,15 @@ bool Engine::init(const std::string& title, int width, int height) {
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER) != 0) {
         std::cerr << "SDL_Init failed: " << SDL_GetError() << "\n";
         return false;
+    }
+
+    // Assets and settings use relative paths and sit next to the executable,
+    // so work from there no matter where the game was launched from.
+    if (char* basePath = SDL_GetBasePath()) {
+        std::error_code ec;
+        std::filesystem::current_path(basePath, ec);
+        if (ec) std::cerr << "Could not switch to " << basePath << ": " << ec.message() << "\n";
+        SDL_free(basePath);
     }
 
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
@@ -113,16 +124,11 @@ bool Engine::init(const std::string& title, int width, int height) {
         return false;
     }
 
-    // Title screen (scene is deferred until player presses Enter)
-    m_titleScreen = std::make_unique<TitleScreen>();
-    if (!m_titleScreen->init(m_windowWidth, m_windowHeight)) {
-        std::cerr << "Failed to init title screen\n";
-        return false;
-    }
-    m_gameState = GameState::TitleScreen;
-
+    // Go straight into the gallery. TitleScreen is still supported: create it here
+    // and leave m_gameState as TitleScreen to bring it back.
     m_running = true;
-    return true;
+    startGame();
+    return m_running;
 }
 
 void Engine::run() {
@@ -262,9 +268,11 @@ void Engine::renderTitleScreen() {
 void Engine::startGame() {
     std::cout << "Starting game...\n";
 
-    // Shut down title screen
-    m_titleScreen->shutdown();
-    m_titleScreen.reset();
+    // Shut down title screen, if the game came through one
+    if (m_titleScreen) {
+        m_titleScreen->shutdown();
+        m_titleScreen.reset();
+    }
 
     // Create and init scene
     m_scene = std::make_unique<Scene>();
@@ -276,7 +284,7 @@ void Engine::startGame() {
 
     m_scene->setAudioManager(m_audio.get());
     m_scene->setSettings(m_settings);
-    m_scene->loadRoom("assets/rooms/hallway.json", *m_renderer);
+    m_scene->loadRoom("assets/rooms/museum.json", *m_renderer);
 
     m_gameState = GameState::Playing;
 }

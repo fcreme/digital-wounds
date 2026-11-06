@@ -39,13 +39,19 @@ This approach gives cinematic-quality backgrounds with minimal GPU cost, while i
 
 - **CMake** 3.20+
 - **SDL2** development libraries
-- **C++17 compiler** (MSVC via Visual Studio 2022, or MinGW-w64)
+- **C++17 compiler** (MSVC via Visual Studio 2022, MinGW-w64, or Apple Clang)
 - **OpenGL 3.3+** capable GPU
+
+On macOS, install the dependencies with Homebrew (the compiler comes from the Xcode Command Line Tools):
+
+```bash
+brew install cmake sdl2 assimp glm
+```
 
 ## Build
 
 ```bash
-cmake -B build
+cmake -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build
 ```
 

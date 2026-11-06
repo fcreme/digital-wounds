@@ -21,7 +21,7 @@ void Book::addPage(const std::string& texturePath) {
     page.texturePath = texturePath;
     page.texture = std::make_unique<Texture>();
     if (!texturePath.empty()) {
-        if (!page.texture->load(texturePath)) {
+        if (!page.texture->load(texturePath, false, false)) {
             std::cerr << "Book: failed to load page texture: " << texturePath << "\n";
         }
     }

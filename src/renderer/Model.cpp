@@ -62,6 +62,18 @@ bool Model::load(const std::string& path) {
     for (unsigned int mi = 0; mi < scene->mNumMeshes; mi++) {
         const aiMesh* aiM = scene->mMeshes[mi];
 
+        // The emissive map may use its own UV set, which must be known before the vertices are built
+        unsigned int emissiveUvSet = 0;
+        if (aiM->mMaterialIndex < scene->mNumMaterials) {
+            const aiMaterial* mat = scene->mMaterials[aiM->mMaterialIndex];
+            if (mat->GetTextureCount(aiTextureType_EMISSIVE) > 0) {
+                aiString unusedPath;
+                mat->GetTexture(aiTextureType_EMISSIVE, 0, &unusedPath, nullptr, &emissiveUvSet);
+            }
+        }
+        if (emissiveUvSet >= AI_MAX_NUMBER_OF_TEXTURECOORDS || !aiM->mTextureCoords[emissiveUvSet])
+            emissiveUvSet = 0;
+
         std::vector<Vertex> vertices(aiM->mNumVertices);
         for (unsigned int v = 0; v < aiM->mNumVertices; v++) {
             vertices[v].position = glm::vec3(aiM->mVertices[v].x, aiM->mVertices[v].y, aiM->mVertices[v].z);
@@ -73,6 +85,9 @@ bool Model::load(const std::string& path) {
 
             if (aiM->mTextureCoords[0])
                 vertices[v].texcoord = glm::vec2(aiM->mTextureCoords[0][v].x, aiM->mTextureCoords[0][v].y);
+
+            if (aiM->mTextureCoords[emissiveUvSet])
+                vertices[v].texcoordEmissive = glm::vec2(aiM->mTextureCoords[emissiveUvSet][v].x, aiM->mTextureCoords[emissiveUvSet][v].y);
 
             if (aiM->mTangents)
                 vertices[v].tangent = glm::vec3(aiM->mTangents[v].x, aiM->mTangents[v].y, aiM->mTangents[v].z);
@@ -179,6 +194,28 @@ bool Model::load(const std::string& path) {
             if (mat->Get(AI_MATKEY_COLOR_EMISSIVE, emissiveColor) == AI_SUCCESS) {
                 submesh->emissive = glm::vec3(emissiveColor.r, emissiveColor.g, emissiveColor.b);
             }
+
+            // Emissive map (glTF multiplies it by the emissive color above)
+            if (mat->GetTextureCount(aiTextureType_EMISSIVE) > 0) {
+                aiString texPath;
+                mat->GetTexture(aiTextureType_EMISSIVE, 0, &texPath);
+                std::string tp(texPath.C_Str());
+                if (!tp.empty() && tp[0] == '*') {
+                    unsigned int texIdx = std::stoi(tp.substr(1));
+                    if (texIdx < scene->mNumTextures && scene->mTextures[texIdx]->mHeight == 0) {
+                        const aiTexture* aiTex = scene->mTextures[texIdx];
+                        submesh->emissiveMap.loadFromMemory(
+                            reinterpret_cast<const unsigned char*>(aiTex->pcData),
+                            static_cast<int>(aiTex->mWidth), true);
+                    }
+                } else {
+                    submesh->emissiveMap.load(resolveTexturePath(modelDir, texPath), true);
+                }
+                // The color only means anything together with its map: on its own it
+                // would add the full color to every pixel and wash the model out.
+                if (submesh->emissiveMap.getID() == 0)
+                    submesh->emissive = glm::vec3(0.0f);
+            }
         }
 
         std::cout << "  submesh " << mi << ": baseColor=("
@@ -215,7 +252,15 @@ void Model::draw(Shader& shader, const glm::vec3& tint) const {
         }
 
         // Emissive
-        shader.setVec3("uEmissive", sub->emissive.x, sub->emissive.y, sub->emissive.z);
+        bool hasEmissiveMap = sub->emissiveMap.getID() != 0;
+        shader.setInt("uHasEmissiveMap", hasEmissiveMap ? 1 : 0);
+        glm::vec3 emissive = sub->emissive;
+        if (hasEmissiveMap) {
+            sub->emissiveMap.bind(GL_TEXTURE3);
+            shader.setInt("uEmissiveMap", 3);
+            emissive *= tint; // a map holding baked lighting has to follow the room's tint
+        }
+        shader.setVec3("uEmissive", emissive.x, emissive.y, emissive.z);
 
         sub->mesh.draw();
     }

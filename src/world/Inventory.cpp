@@ -236,6 +236,7 @@ void Inventory::loadIconTexture(InventoryItem& item) {
 
     if (!item.iconPath.empty()) {
         int w, h, channels;
+        stbi_set_flip_vertically_on_load(false); // drawn on a top-down UI quad
         unsigned char* data = stbi_load(item.iconPath.c_str(), &w, &h, &channels, 4);
         if (data) {
             GLuint tex;

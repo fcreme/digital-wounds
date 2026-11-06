@@ -29,6 +29,7 @@ private:
         Mesh mesh;
         Texture texture;
         Texture normalMap;
+        Texture emissiveMap;
         glm::vec3 baseColor{0.5f};
         float roughness = 0.5f;  // 0 = mirror, 1 = matte
         glm::vec3 emissive{0.0f};
