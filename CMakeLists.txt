@@ -72,6 +72,8 @@ add_executable(dw_tests
     tests/test_main.cpp
     tests/test_artist_catalog.cpp
     src/world/ArtistCatalog.cpp
+    tests/test_painting_data.cpp
+    src/world/PaintingData.cpp
 )
 target_compile_definitions(dw_tests PRIVATE DW_TEST_FIXTURES="${CMAKE_SOURCE_DIR}/tests/fixtures")
 target_include_directories(dw_tests PRIVATE
@@ -79,6 +81,8 @@ target_include_directories(dw_tests PRIVATE
     ${CMAKE_SOURCE_DIR}/lib
     ${CMAKE_SOURCE_DIR}/tests
 )
+find_package(glm CONFIG REQUIRED)
+target_link_libraries(dw_tests PRIVATE glm::glm)
 add_test(NAME dw_tests COMMAND dw_tests)
 
 # --- Compiler warnings ---
