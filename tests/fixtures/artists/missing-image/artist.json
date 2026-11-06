@@ -1,0 +1,4 @@
+{ "name": "Half Ghost", "description": "One file is gone.",
+  "designs": [
+    { "id": "here", "title": "Here", "description": "present", "image": "here.png" },
+    { "id": "gone", "title": "Gone", "description": "absent", "image": "gone.png" } ] }

@@ -70,7 +70,10 @@ endif()
 enable_testing()
 add_executable(dw_tests
     tests/test_main.cpp
+    tests/test_artist_catalog.cpp
+    src/world/ArtistCatalog.cpp
 )
+target_compile_definitions(dw_tests PRIVATE DW_TEST_FIXTURES="${CMAKE_SOURCE_DIR}/tests/fixtures")
 target_include_directories(dw_tests PRIVATE
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/lib
