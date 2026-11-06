@@ -9,6 +9,13 @@
 
 namespace fs = std::filesystem;
 
+// Returns "" unless the key exists and holds a string, so wrongly typed
+// fields can never throw.
+static std::string getString(const nlohmann::json& j, const char* key) {
+    auto it = j.find(key);
+    return (it != j.end() && it->is_string()) ? it->get<std::string>() : std::string();
+}
+
 void ArtistCatalog::warn(const std::string& msg) {
     std::cerr << "ArtistCatalog: " << msg << "\n";
     m_warnings.push_back(msg);
@@ -40,9 +47,12 @@ int ArtistCatalog::loadFromDirectory(const std::string& dir) {
     }
 
     std::vector<fs::path> folders;
-    for (const auto& entry : fs::directory_iterator(dir, ec)) {
-        if (entry.is_directory()) folders.push_back(entry.path());
+    fs::directory_iterator it(dir, ec);
+    for (; !ec && it != fs::directory_iterator(); it.increment(ec)) {
+        if (it->is_directory(ec)) folders.push_back(it->path());
+        ec.clear();
     }
+    if (ec) warn("could not read artist directory: " + dir + " (" + ec.message() + ")");
     std::sort(folders.begin(), folders.end());
 
     for (const auto& folder : folders) {
@@ -62,8 +72,8 @@ int ArtistCatalog::loadFromDirectory(const std::string& dir) {
 
         Artist artist;
         artist.id = id;
-        artist.name = cleanText(j.value("name", std::string()), MAX_NAME_CHARS, id + " name");
-        artist.description = cleanText(j.value("description", std::string()), MAX_ARTIST_DESC_CHARS, id + " description");
+        artist.name = cleanText(getString(j, "name"), MAX_NAME_CHARS, id + " name");
+        artist.description = cleanText(getString(j, "description"), MAX_ARTIST_DESC_CHARS, id + " description");
         if (artist.name.empty()) {
             warn(id + ": artist has no name");
             continue;
@@ -73,8 +83,8 @@ int ArtistCatalog::loadFromDirectory(const std::string& dir) {
             for (const auto& d : j["designs"]) {
                 if (!d.is_object()) continue;
                 ArtistDesign design;
-                design.id = d.value("id", std::string());
-                const std::string image = d.value("image", std::string());
+                design.id = getString(d, "id");
+                const std::string image = getString(d, "image");
                 const std::string label = id + "/" + (design.id.empty() ? "?" : design.id);
                 if (design.id.empty() || image.empty()) {
                     warn(label + ": design needs an id and an image");
@@ -86,8 +96,8 @@ int ArtistCatalog::loadFromDirectory(const std::string& dir) {
                     continue;
                 }
                 design.imagePath = imagePath.generic_string();
-                design.title = cleanText(d.value("title", std::string()), MAX_TITLE_CHARS, label + " title");
-                design.description = cleanText(d.value("description", std::string()), MAX_DESIGN_DESC_CHARS, label + " description");
+                design.title = cleanText(getString(d, "title"), MAX_TITLE_CHARS, label + " title");
+                design.description = cleanText(getString(d, "description"), MAX_DESIGN_DESC_CHARS, label + " description");
                 artist.designs.push_back(std::move(design));
             }
         }

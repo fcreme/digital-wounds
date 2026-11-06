@@ -88,3 +88,16 @@ TEST(missingDirectoryReturnsZero) {
     CHECK(c.loadFromDirectory(FIX + "/does-not-exist") == 0);
     CHECK(c.artists().empty());
 }
+
+TEST(wronglyTypedFieldsDoNotThrow) {
+    ArtistCatalog c;
+    c.loadFromDirectory(FIX);
+    CHECK(c.find("good") != nullptr);
+    CHECK(c.find("bad-types") == nullptr);
+    CHECK(c.find("bad-designs-type") == nullptr);
+    const Artist* m = c.find("mixed-entries");
+    CHECK(m != nullptr);
+    if (!m) return;
+    CHECK(m->designs.size() == 1);
+    CHECK(m->designs[0].id == "ok");
+}

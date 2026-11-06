@@ -1,0 +1,3 @@
+{ "name": "Mixed", "description": "x",
+  "designs": [ 7, "str", null, { "id": "n", "title": 3, "description": {}, "image": null },
+    { "id": "ok", "title": "Fine", "description": "fine", "image": "ok.png" } ] }
