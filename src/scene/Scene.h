@@ -61,7 +61,9 @@ public:
     Camera& getCamera() { return m_camera; }
     // Keeps the room camera correct after the window or display changes.
     void onResize(int drawableWidth, int drawableHeight) {
+        if (drawableWidth <= 0 || drawableHeight <= 0) return;  // minimized
         m_camera.setAspect(static_cast<float>(drawableWidth) / static_cast<float>(drawableHeight));
+        m_transition.onResize(drawableWidth, drawableHeight);
     }
     Player& getPlayer() { return m_player; }
     ParticleSystem& getParticleSystem() { return m_particles; }

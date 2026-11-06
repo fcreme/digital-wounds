@@ -205,8 +205,14 @@ void Engine::processEvents() {
                 break;
             case SDL_WINDOWEVENT:
                 if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
-                    SDL_GetWindowSize(m_window, &m_windowWidth, &m_windowHeight);
-                    SDL_GL_GetDrawableSize(m_window, &m_drawableWidth, &m_drawableHeight);
+                    int ww = 0, wh = 0, dw = 0, dh = 0;
+                    SDL_GetWindowSize(m_window, &ww, &wh);
+                    SDL_GL_GetDrawableSize(m_window, &dw, &dh);
+                    if (ww <= 0 || wh <= 0 || dw <= 0 || dh <= 0) break;  // minimized
+                    m_windowWidth = ww;
+                    m_windowHeight = wh;
+                    m_drawableWidth = dw;
+                    m_drawableHeight = dh;
                     m_renderer->onResize(m_drawableWidth, m_drawableHeight);
                     if (m_scene) m_scene->onResize(m_drawableWidth, m_drawableHeight);
                     if (m_ui) m_ui->onResize(m_windowWidth, m_windowHeight);

@@ -59,6 +59,7 @@ bool Scene::init(Renderer& renderer) {
         std::cerr << "Scene: failed to init room transition\n";
         return false;
     }
+    m_transition.onResize(renderer.getWidth(), renderer.getHeight());
 
     if (!m_particles.init()) {
         std::cerr << "Scene: failed to init particle system\n";
