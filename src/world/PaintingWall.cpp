@@ -1,4 +1,5 @@
 #include "world/PaintingWall.h"
+#include "world/MoodUniforms.h"
 #include "world/ArtistCatalog.h"
 
 #include <glm/gtc/type_ptr.hpp>
@@ -53,6 +54,7 @@ int PaintingWall::load(const std::vector<Painting>& paintings, const ArtistCatal
         Item& item = m_items[i];
         item.texture = texIndex;
         item.size = p.size;
+        item.normal = p.normal;
         item.imageAspect = static_cast<float>(m_textures[texIndex].getWidth()) /
                            static_cast<float>(m_textures[texIndex].getHeight());
         item.firstVertex = static_cast<int>(verts.size() / 5);
@@ -98,6 +100,7 @@ void PaintingWall::render(const Camera& camera, int highlightedIndex, float high
     m_shader.setMat4("uProjection", glm::value_ptr(camera.getProjection()));
     m_shader.setFloat("uBrightness", m_brightness);
     m_shader.setInt("uArt", 0);
+    applyMoodUniforms(m_shader, m_mood, m_spots);
 
     glEnable(GL_DEPTH_TEST);
     glDepthMask(GL_TRUE);
@@ -107,6 +110,7 @@ void PaintingWall::render(const Camera& camera, int highlightedIndex, float high
         if (item.texture < 0) continue;
         m_shader.setVec2("uSize", item.size.x, item.size.y);
         m_shader.setFloat("uImageAspect", item.imageAspect);
+        m_shader.setVec3("uNormal", item.normal.x, item.normal.y, item.normal.z);
         m_shader.setFloat("uHighlight",
                           static_cast<int>(i) == highlightedIndex ? highlightAmount : 0.0f);
         m_textures[item.texture].bind(GL_TEXTURE0);

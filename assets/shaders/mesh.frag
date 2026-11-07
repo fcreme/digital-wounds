@@ -49,6 +49,35 @@ uniform float uHighlight;
 uniform sampler2D uShadowMap;
 uniform int uUseShadows;
 
+// Mood light: a multiplier on baked light. Keep identical in mesh.frag and painting.frag;
+// MAX_SPOTS must match MAX_MOOD_SPOTS in src/world/MoodLighting.h.
+#define MAX_SPOTS 32
+uniform int uMoodEnabled;
+uniform float uMoodAmbient;
+uniform vec3 uMoodCeiling;       // start height, end height, level at the ceiling
+uniform int uNumSpots;
+uniform vec3 uSpotPos[MAX_SPOTS];
+uniform vec3 uSpotDir[MAX_SPOTS];
+uniform vec3 uSpotColor;         // colour times intensity
+uniform vec3 uSpotShape;         // cos(outer), cos(inner), range
+
+vec3 moodLight(vec3 p, vec3 n) {
+    float base = uMoodAmbient * mix(1.0, uMoodCeiling.z, smoothstep(uMoodCeiling.x, uMoodCeiling.y, p.y));
+    vec3 light = vec3(base);
+    for (int i = 0; i < uNumSpots && i < MAX_SPOTS; i++) {
+        vec3 d = p - uSpotPos[i];
+        float dist = length(d);
+        vec3 dir = d / max(dist, 1e-4);
+        float cone = smoothstep(uSpotShape.x, uSpotShape.y, dot(dir, uSpotDir[i]));
+        float r = dist / uSpotShape.z;
+        float atten = 1.0 / (1.0 + r * r);
+        // Two-sided surfaces: soften the facing term rather than trusting the normal's sign.
+        float facing = 0.35 + 0.65 * abs(dot(n, dir));
+        light += uSpotColor * cone * atten * facing;
+    }
+    return light;
+}
+
 float calculateShadow(vec4 fragPosLightSpace, vec3 normal) {
     // Perspective divide
     vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
@@ -151,6 +180,8 @@ void main() {
     } else {
         result += uEmissive;
     }
+
+    if (uMoodEnabled != 0) result *= moodLight(vWorldPos, normalize(vNormal));
 
     // Interaction highlight: emissive rim glow
     if (uHighlight > 0.0) {

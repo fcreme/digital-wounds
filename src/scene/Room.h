@@ -1,6 +1,7 @@
 #pragma once
 
 #include "renderer/Camera.h"
+#include "world/MoodLighting.h"
 #include <glm/glm.hpp>
 #include <string>
 #include <vector>
@@ -181,6 +182,7 @@ struct RoomDef {
 
     // Fog parameters
     FogParamsDef fogParams;
+    MoodDef mood;  // "mood" block; mood.defined is false without one
 
     // Per-room post-process overrides
     PostProcessDef postProcess;

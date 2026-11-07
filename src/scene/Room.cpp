@@ -226,6 +226,26 @@ bool loadRoomDef(const std::string& path, RoomDef& out) {
         out.fogParams.far = getOr<float>(fg, "far", 100.0f);
     }
 
+    // Mood lighting (multiplies the baked room light; see MoodDef)
+    if (j.contains("mood") && j["mood"].is_object()) {
+        auto& md = j["mood"];
+        MoodDef& m = out.mood;
+        m.defined = getOr<bool>(md, "enabled", true);
+        m.ambient = getOr<float>(md, "ambient", m.ambient);
+        m.ceilingStart = getOr<float>(md, "ceiling_start", m.ceilingStart);
+        m.ceilingEnd = getOr<float>(md, "ceiling_end", m.ceilingEnd);
+        m.ceilingLevel = getOr<float>(md, "ceiling_level", m.ceilingLevel);
+        if (md.contains("spot_color")) m.spotColor = parseVec3(md["spot_color"]);
+        m.spotIntensity = getOr<float>(md, "spot_intensity", m.spotIntensity);
+        m.spotRange = getOr<float>(md, "spot_range", m.spotRange);
+        m.spotInnerDeg = getOr<float>(md, "spot_inner_deg", m.spotInnerDeg);
+        m.spotOuterDeg = getOr<float>(md, "spot_outer_deg", m.spotOuterDeg);
+        m.spotSpacing = getOr<float>(md, "spot_spacing", m.spotSpacing);
+        m.spotHeight = getOr<float>(md, "spot_height", m.spotHeight);
+        m.spotOffset = getOr<float>(md, "spot_offset", m.spotOffset);
+        m.maxSpots = getOr<int>(md, "max_spots", m.maxSpots);
+    }
+
     // Post-process overrides
     if (j.contains("post_process")) {
         auto& pp = j["post_process"];

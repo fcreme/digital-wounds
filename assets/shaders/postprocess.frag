@@ -69,7 +69,9 @@ void main() {
     color += bloom * uBloomIntensity;
 
     // --- Distance Fog ---
-    if (uFogEnabled != 0 && !isBackground) {
+    // isBackground (depth > 0.95) is meant for pre-rendered backgrounds; with a 0.1-100 camera it
+    // is everything past about 2 units, so fog only skips pixels where nothing was drawn.
+    if (uFogEnabled != 0 && depth < 0.99999) {
         float linDepth = linearizeDepth(depth, uNearPlane, uFarPlane);
         float fogFactor = 1.0 - exp(-pow(linDepth / uFogEnd, 2.0) * uFogStart);
         color = mix(color, uFogColor, fogFactor);

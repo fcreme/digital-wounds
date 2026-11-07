@@ -4,6 +4,7 @@
 #include "renderer/Shader.h"
 #include "renderer/Texture.h"
 #include "world/PaintingData.h"
+#include "world/MoodLighting.h"
 
 #include <glad/gl.h>
 #include <unordered_map>
@@ -27,6 +28,7 @@ public:
     // Returns the number of paintings that will be drawn.
     int load(const std::vector<Painting>& paintings, const ArtistCatalog& catalog);
     void setBrightness(float brightness) { m_brightness = brightness; }
+    void setMood(const MoodDef& def, const std::vector<SpotLight>& spots) { m_mood = def; m_spots = spots; }
     void render(const Camera& camera, int highlightedIndex, float highlightAmount);
     void shutdown();
 
@@ -34,6 +36,7 @@ private:
     struct Item {
         int firstVertex = 0;
         glm::vec2 size{1.0f};
+        glm::vec3 normal{0.0f, 0.0f, 1.0f};
         float imageAspect = 1.0f;
         int texture = -1;  // index in m_textures
     };
@@ -42,6 +45,8 @@ private:
     GLuint m_vao = 0;
     GLuint m_vbo = 0;
     float m_brightness = 1.0f;
+    MoodDef m_mood;
+    std::vector<SpotLight> m_spots;
     std::vector<Texture> m_textures;
     std::vector<Item> m_items;  // parallel to the painting list; texture -1 = skipped
 };

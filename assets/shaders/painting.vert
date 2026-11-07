@@ -7,8 +7,10 @@ uniform mat4 uView;
 uniform mat4 uProjection;
 
 out vec2 vUV;
+out vec3 vWorldPos;  // the quads are built in world space
 
 void main() {
     vUV = aUV;
+    vWorldPos = aPos;
     gl_Position = uProjection * uView * vec4(aPos, 1.0);
 }

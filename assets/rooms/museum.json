@@ -50,10 +50,25 @@
         "contrast": 1.0,
         "grain_strength": 0.0
     },
+    "mood": {
+        "ambient": 0.3,
+        "ceiling_start": 9.0,
+        "ceiling_end": 14.5,
+        "ceiling_level": 0.35,
+        "spot_color": [1.0, 0.82, 0.62],
+        "spot_intensity": 1.5,
+        "spot_range": 9.0,
+        "spot_inner_deg": 14.0,
+        "spot_outer_deg": 30.0,
+        "spot_spacing": 7.0,
+        "spot_height": 13.0,
+        "spot_offset": 4.5,
+        "max_spots": 32
+    },
     "fog": {
         "color": [0.0, 0.0, 0.0],
-        "density": 0.0,
-        "max_distance": 100.0,
+        "density": 1.2,
+        "max_distance": 60.0,
         "near": 0.1,
         "far": 100.0
     }

@@ -1,4 +1,5 @@
 #include "scene/Scene.h"
+#include "world/MoodUniforms.h"
 #include "renderer/Renderer.h"
 #include "renderer/BackgroundLayer.h"
 #include "renderer/ShadowMap.h"
@@ -201,6 +202,12 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
         m_paintingWall.setBrightness(m_currentRoom.paintingBrightness);
         m_paintingWall.load(m_paintings, m_catalog);
     }
+    m_moodSpots.clear();
+    if (m_currentRoom.mood.defined) {
+        m_moodSpots = placeMoodSpots(m_paintings, m_currentRoom.mood);
+        std::cout << "Scene: mood lighting with " << m_moodSpots.size() << " spotlights\n";
+    }
+    m_paintingWall.setMood(m_currentRoom.mood, m_moodSpots);
 
     // Load point lights from room definition
     for (const auto& pl : m_currentRoom.pointLights) {
@@ -799,6 +806,8 @@ void Scene::renderObjects() {
     m_meshShader.setVec3("uAmbient", m_currentRoom.ambientColor.x, m_currentRoom.ambientColor.y, m_currentRoom.ambientColor.z);
     m_meshShader.setVec3("uLightDir", m_currentRoom.lightDir.x, m_currentRoom.lightDir.y, m_currentRoom.lightDir.z);
     m_meshShader.setVec3("uLightColor", m_currentRoom.lightColor.x, m_currentRoom.lightColor.y, m_currentRoom.lightColor.z);
+
+    applyMoodUniforms(m_meshShader, m_currentRoom.mood, m_moodSpots);
 
     // Point lights
     int numLights = std::min(static_cast<int>(m_pointLights.size()), 8);

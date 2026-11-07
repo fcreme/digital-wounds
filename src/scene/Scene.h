@@ -115,6 +115,7 @@ private:
     ArtistCatalog m_catalog;
     std::vector<Painting> m_paintings;
     PaintingWall m_paintingWall;
+    std::vector<SpotLight> m_moodSpots;
     ArtistView m_artistView;
     int m_nearPainting = -1;  // painting under the crosshair, -1 if none
 
