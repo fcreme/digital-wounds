@@ -5,6 +5,9 @@
 #include "audio/AudioManager.h"
 #include "ui/UIOverlay.h"
 #include "ui/TitleScreen.h"
+#ifdef DW_TEST_DRIVER
+#include "core/TestDriver.h"
+#endif
 
 #include <glad/gl.h>
 #include <SDL.h>
@@ -46,13 +49,14 @@ bool Engine::init(const std::string& title, int width, int height) {
         title.c_str(),
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
         m_windowWidth, m_windowHeight,
-        SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE
+        SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
     );
 
     if (!m_window) {
         std::cerr << "SDL_CreateWindow failed: " << SDL_GetError() << "\n";
         return false;
     }
+    SDL_SetWindowMinimumSize(m_window, 960, 540);
 
     m_glContext = SDL_GL_CreateContext(m_window);
     if (!m_glContext) {
@@ -80,7 +84,8 @@ bool Engine::init(const std::string& title, int width, int height) {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glClearColor(0.02f, 0.02f, 0.03f, 1.0f);
-    glViewport(0, 0, m_windowWidth, m_windowHeight);
+    SDL_GL_GetDrawableSize(m_window, &m_drawableWidth, &m_drawableHeight);
+    glViewport(0, 0, m_drawableWidth, m_drawableHeight);
 
     // Input
     m_inputManager = std::make_unique<InputManager>();
@@ -112,7 +117,7 @@ bool Engine::init(const std::string& title, int width, int height) {
 
     // Renderer
     m_renderer = std::make_unique<Renderer>();
-    if (!m_renderer->init(m_windowWidth, m_windowHeight)) {
+    if (!m_renderer->init(m_drawableWidth, m_drawableHeight)) {
         std::cerr << "Failed to init renderer\n";
         return false;
     }
@@ -127,6 +132,13 @@ bool Engine::init(const std::string& title, int width, int height) {
     // Go straight into the gallery. TitleScreen is still supported: create it here
     // and leave m_gameState as TitleScreen to bring it back.
     m_running = true;
+#ifdef DW_TEST_DRIVER
+    // Load the script before startGame so the first room load does not grab the mouse.
+    if (!m_scriptPath.empty()) {
+        m_driver = std::make_unique<TestDriver>();
+        if (!m_driver->load(m_scriptPath)) return false;
+    }
+#endif
     startGame();
     return m_running;
 }
@@ -145,8 +157,14 @@ void Engine::run() {
 
         m_inputManager->preUpdate();
         processEvents();
+#ifdef DW_TEST_DRIVER
+        if (m_driver) m_driver->beforeUpdate(*m_inputManager);
+#endif
         update(m_deltaTime);
         render();
+#ifdef DW_TEST_DRIVER
+        if (m_driver) m_driver->afterRender(*this);
+#endif
 
         SDL_GL_SwapWindow(m_window);
     }
@@ -155,6 +173,11 @@ void Engine::run() {
 void Engine::processEvents() {
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
+#ifdef DW_TEST_DRIVER
+        // Scripted runs ignore real input; stray events have spoiled runs before.
+        // Window events pass so the driver's resize command takes effect.
+        if (m_driver && event.type != SDL_QUIT && event.type != SDL_WINDOWEVENT) continue;
+#endif
         switch (event.type) {
             case SDL_QUIT:
                 m_running = false;
@@ -182,10 +205,17 @@ void Engine::processEvents() {
                 m_inputManager->onMouseUp(event.button.button);
                 break;
             case SDL_WINDOWEVENT:
-                if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
-                    m_windowWidth = event.window.data1;
-                    m_windowHeight = event.window.data2;
-                    m_renderer->onResize(m_windowWidth, m_windowHeight);
+                if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
+                    int ww = 0, wh = 0, dw = 0, dh = 0;
+                    SDL_GetWindowSize(m_window, &ww, &wh);
+                    SDL_GL_GetDrawableSize(m_window, &dw, &dh);
+                    if (ww <= 0 || wh <= 0 || dw <= 0 || dh <= 0) break;  // minimized
+                    m_windowWidth = ww;
+                    m_windowHeight = wh;
+                    m_drawableWidth = dw;
+                    m_drawableHeight = dh;
+                    m_renderer->onResize(m_drawableWidth, m_drawableHeight);
+                    if (m_scene) m_scene->onResize(m_drawableWidth, m_drawableHeight);
                     if (m_ui) m_ui->onResize(m_windowWidth, m_windowHeight);
                     if (m_titleScreen) m_titleScreen->onResize(m_windowWidth, m_windowHeight);
                 }
@@ -239,7 +269,7 @@ void Engine::render() {
                 auto& pp = m_renderer->getPostProcess();
                 m_scene->getParticleSystem().setDepthTexture(
                     pp.getDepthTexture(), pp.getNearPlane(), pp.getFarPlane(),
-                    m_windowWidth, m_windowHeight);
+                    m_drawableWidth, m_drawableHeight);
             }
             m_scene->renderParticles();
 
@@ -261,7 +291,7 @@ void Engine::render() {
 void Engine::renderTitleScreen() {
     // Render directly to the default framebuffer (no post-processing)
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glViewport(0, 0, m_windowWidth, m_windowHeight);
+    glViewport(0, 0, m_drawableWidth, m_drawableHeight);
     m_titleScreen->render(*m_ui, m_windowWidth, m_windowHeight);
 }
 
@@ -284,7 +314,11 @@ void Engine::startGame() {
 
     m_scene->setAudioManager(m_audio.get());
     m_scene->setSettings(m_settings);
-    m_scene->loadRoom("assets/rooms/museum.json", *m_renderer);
+    if (!m_scene->loadRoom("assets/rooms/museum.json", *m_renderer)) {
+        std::cerr << "Failed to load assets/rooms/museum.json\n";
+        m_running = false;
+        return;
+    }
 
     m_gameState = GameState::Playing;
 }

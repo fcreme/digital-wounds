@@ -4,6 +4,7 @@
 #include "renderer/Shader.h"
 #include "scene/Room.h"
 #include <glm/glm.hpp>
+#include <algorithm>
 
 namespace dw {
 
@@ -41,6 +42,21 @@ public:
     // Collision bounds (AABB half-extents)
     void setWorldBounds(float minX, float maxX, float minZ, float maxZ);
     void setCollisionBoxes(const std::vector<CollisionBox>& boxes);
+
+#ifdef DW_TEST_DRIVER
+    // True when a player can stand at (x, z): inside world bounds and clear of collision boxes.
+    bool debugCanStand(float x, float z) const {
+        return x >= m_boundsMinX && x <= m_boundsMaxX && z >= m_boundsMinZ && z <= m_boundsMaxZ
+            && !collidesWithAny(x, z);
+    }
+    // Places the player and sets the look angles at once, smoothed values included.
+    void debugAim(const glm::vec3& pos, float yaw, float pitch) {
+        m_position = pos;
+        m_rotation = m_smoothYaw = yaw;
+        m_pitch = m_smoothPitch = std::clamp(pitch, -MAX_PITCH, MAX_PITCH);
+    }
+    float debugMaxPitch() const { return MAX_PITCH; }
+#endif
 
 private:
     bool collidesWithAny(float x, float z) const;

@@ -1,0 +1,36 @@
+{
+  "name": "Hexarch Spindlethorn",
+  "description": "Needle-thin mirrored sigils, all spike and hairline. They mean nothing, and he will happily explain them.",
+  "designs": [
+    {
+      "id": "thorn-star",
+      "title": "Thorn Star",
+      "description": "An eight-pointed star of long needles and fine curves, sharp enough to read at any size.",
+      "image": "thorn-star.png"
+    },
+    {
+      "id": "spine-cross",
+      "title": "Spine Cross",
+      "description": "A long spiked cross with paired barbs running its whole length. Made for the backbone.",
+      "image": "spine-cross.png"
+    },
+    {
+      "id": "barbed-halo",
+      "title": "Barbed Halo",
+      "description": "A twisted wire halo with spikes pointing both ways and a small star held at its centre.",
+      "image": "barbed-halo.png"
+    },
+    {
+      "id": "bat-sigil",
+      "title": "Bat Sigil",
+      "description": "A bat reduced to its bones: a few long tapering strokes and a thin line of membrane.",
+      "image": "bat-sigil.png"
+    },
+    {
+      "id": "hexed-crown",
+      "title": "Hexed Crown",
+      "description": "A crown of needles above a heavy band, with more of them raining down beneath it.",
+      "image": "hexed-crown.png"
+    }
+  ]
+}

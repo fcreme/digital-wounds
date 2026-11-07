@@ -1,0 +1,42 @@
+{
+  "name": "Old Quillon Burinsnout",
+  "description": "Everything is shaded with swelling parallel lines, as on old banknotes. Says he dislikes curves, draws them anyway.",
+  "designs": [
+    {
+      "id": "sperm-whale",
+      "title": "Sperm Whale",
+      "description": "A whale in banknote lines, heavy on the belly, blowing over three wavering lines of sea.",
+      "image": "sperm-whale.png"
+    },
+    {
+      "id": "alpine-range",
+      "title": "Alpine Range",
+      "description": "Three peaks with engraved shadow faces and white caps, and a rayed sun behind them.",
+      "image": "alpine-range.png"
+    },
+    {
+      "id": "lighthouse",
+      "title": "Lighthouse",
+      "description": "A banded tower on a rock, its two beams ruled out across the dark. For the ones who stayed ashore.",
+      "image": "lighthouse.png"
+    },
+    {
+      "id": "engraved-moon",
+      "title": "Engraved Moon",
+      "description": "A full cratered moon in curving lines that swell into its shadow, ringed by small stars.",
+      "image": "engraved-moon.png"
+    },
+    {
+      "id": "bronze-bell",
+      "title": "Bronze Bell",
+      "description": "A ship's bell shaded like a coin, mid-swing, with its clapper showing below the lip.",
+      "image": "bronze-bell.png"
+    },
+    {
+      "id": "windfall-pear",
+      "title": "Windfall Pear",
+      "description": "One heavy pear and one leaf, shaded only with line. Humble subject, a lot of patience.",
+      "image": "windfall-pear.png"
+    }
+  ]
+}

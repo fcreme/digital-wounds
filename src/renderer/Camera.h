@@ -12,6 +12,7 @@ public:
     // Fixed camera (RE Remake style)
     void setup(const glm::vec3& position, const glm::vec3& target, const glm::vec3& up = glm::vec3(0.0f, 1.0f, 0.0f));
     void setPerspective(float fovDegrees, float aspect, float nearPlane, float farPlane);
+    void setAspect(float aspect) { setPerspective(m_fov, aspect, m_near, m_far); }
 
     // First-person camera — call each frame with player state
     void updateFromPlayer(const glm::vec3& playerPos, float eyeHeight, float yaw, float pitch);
@@ -32,6 +33,9 @@ private:
 
     glm::mat4 m_view{1.0f};
     glm::mat4 m_projection{1.0f};
+    float m_fov = 45.0f;
+    float m_near = 0.1f;
+    float m_far = 100.0f;
 
     // Shake state
     float m_shakeIntensity = 0.0f;

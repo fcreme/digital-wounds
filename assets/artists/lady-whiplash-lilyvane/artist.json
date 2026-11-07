@@ -1,0 +1,36 @@
+{
+  "name": "Lady Whiplash Lilyvane",
+  "description": "Haloes and long whiplash curves, swelling and thinning like an old poster for an opera nobody remembers.",
+  "designs": [
+    {
+      "id": "peacock-eye",
+      "title": "Peacock Eye",
+      "description": "A single peacock feather rising through a beaded halo, inside a whiplash frame.",
+      "image": "peacock-eye.png"
+    },
+    {
+      "id": "calla-lilies",
+      "title": "Calla Lilies",
+      "description": "Three lilies on tall stems in front of a halo. Elegant, a little severe, very good on a calf.",
+      "image": "calla-lilies.png"
+    },
+    {
+      "id": "halo-dragonfly",
+      "title": "Dragonfly Halo",
+      "description": "A dragonfly with netted wings crossing a large beaded halo, long tail hanging straight down.",
+      "image": "halo-dragonfly.png"
+    },
+    {
+      "id": "swan-reflection",
+      "title": "Swan on Still Water",
+      "description": "A swan bending its neck in front of a halo, with thick-and-thin ripples spreading below.",
+      "image": "swan-reflection.png"
+    },
+    {
+      "id": "ginkgo-spray",
+      "title": "Ginkgo Spray",
+      "description": "A spray of fan-shaped ginkgo leaves spreading across a halo, on a thin frame of curves.",
+      "image": "ginkgo-spray.png"
+    }
+  ]
+}

@@ -14,6 +14,7 @@ class Scene;
 class AudioManager;
 class UIOverlay;
 class TitleScreen;
+class TestDriver;
 
 enum class GameState {
     TitleScreen,
@@ -29,6 +30,8 @@ public:
     Engine& operator=(const Engine&) = delete;
 
     bool init(const std::string& title, int width, int height);
+    // Path of a test-driver script; only honoured in DW_TEST_DRIVER builds.
+    void setScriptPath(const std::string& path) { m_scriptPath = path; }
     void run();
     void shutdown();
 
@@ -37,6 +40,9 @@ public:
     int getWindowHeight() const { return m_windowHeight; }
 
 private:
+#ifdef DW_TEST_DRIVER
+    friend class TestDriver;
+#endif
     void processEvents();
     void update(float dt);
     void render();
@@ -57,12 +63,20 @@ private:
 
     int m_windowWidth = 1280;
     int m_windowHeight = 720;
+    // Pixels of the GL framebuffer; larger than the window on Retina.
+    int m_drawableWidth = 1280;
+    int m_drawableHeight = 720;
 
     bool m_running = false;
     float m_deltaTime = 0.0f;
     float m_totalTime = 0.0f;
 
     GameSettings m_settings;
+
+    std::string m_scriptPath;
+#ifdef DW_TEST_DRIVER
+    std::unique_ptr<TestDriver> m_driver;
+#endif
 };
 
 } // namespace dw

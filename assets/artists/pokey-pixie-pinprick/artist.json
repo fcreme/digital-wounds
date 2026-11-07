@@ -1,0 +1,42 @@
+{
+  "name": "Pokey Pixie Pinprick",
+  "description": "No machine, one needle. Every line is a row of separate dots you could count, if you have the afternoon.",
+  "designs": [
+    {
+      "id": "poked-heart",
+      "title": "Poked Heart",
+      "description": "A double-lined heart in single dots, half filled with an even grid of more dots.",
+      "image": "poked-heart.png"
+    },
+    {
+      "id": "moon-and-pins",
+      "title": "Moon and Pins",
+      "description": "A dotted crescent moon with a handful of tiny stars caught in its curve.",
+      "image": "moon-and-pins.png"
+    },
+    {
+      "id": "poked-dagger",
+      "title": "Poked Dagger",
+      "description": "A little dagger with a ribbon wound round its blade, all dots, no solid line anywhere.",
+      "image": "poked-dagger.png"
+    },
+    {
+      "id": "poked-bee",
+      "title": "Poked Bee",
+      "description": "A round bee with dotted wings and dense striped bands. Friendly, and only slightly lopsided.",
+      "image": "poked-bee.png"
+    },
+    {
+      "id": "poked-cherries",
+      "title": "Poked Cherries",
+      "description": "A pair of cherries on one twig, with hand-poked shadow and a small shine on each.",
+      "image": "poked-cherries.png"
+    },
+    {
+      "id": "poked-sheet",
+      "title": "Nine Small Charms",
+      "description": "A page of nine tiny charms to pick from: heart, star, moon, dagger, flower, sun, skull, gem and bolt.",
+      "image": "poked-sheet.png"
+    }
+  ]
+}

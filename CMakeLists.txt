@@ -46,21 +46,59 @@ if(WIN32)
     endforeach()
 endif()
 
-# --- Copy assets to build directory ---
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+# --- Copy assets and props to build directory on every build ---
+# A custom target (not POST_BUILD) so data-only edits reach the build
+# even when the executable does not relink.
+add_custom_target(copy_assets ALL
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/assets
         $<TARGET_FILE_DIR:${PROJECT_NAME}>/assets
-    COMMENT "Copying assets to build directory"
-)
-
-# --- Copy props (3D models) to build directory ---
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/props
         $<TARGET_FILE_DIR:${PROJECT_NAME}>/props
-    COMMENT "Copying props to build directory"
+    COMMENT "Copying assets and props to build directory"
 )
+add_dependencies(${PROJECT_NAME} copy_assets)
+
+# --- Scripted test driver (off in normal builds) ---
+option(DW_TEST_DRIVER "Build the scripted test driver (--script)" OFF)
+if(DW_TEST_DRIVER)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE DW_TEST_DRIVER)
+endif()
+
+# --- Unit tests (OpenGL-free sources only) ---
+option(DW_BUILD_TESTS "Build the unit tests (dw_tests)" ON)
+if(DW_BUILD_TESTS)
+enable_testing()
+add_executable(dw_tests
+    tests/test_main.cpp
+    tests/test_artist_catalog.cpp
+    src/world/ArtistCatalog.cpp
+    tests/test_painting_data.cpp
+    src/world/PaintingData.cpp
+    tests/test_text_layout.cpp
+    src/ui/TextLayout.cpp
+    src/utils/stb_impl.cpp
+)
+target_compile_definitions(dw_tests PRIVATE DW_TEST_FIXTURES="${CMAKE_SOURCE_DIR}/tests/fixtures")
+target_include_directories(dw_tests PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/lib
+    ${CMAKE_SOURCE_DIR}/tests
+)
+# The game finds GLM through the compiler include path; do the same if no
+# glmConfig.cmake is installed.
+find_package(glm CONFIG QUIET)
+if(glm_FOUND)
+    target_link_libraries(dw_tests PRIVATE glm::glm)
+else()
+    target_include_directories(dw_tests PRIVATE ${SDL2_INCLUDE_DIRS})
+endif()
+add_test(NAME dw_tests COMMAND dw_tests)
+if(NOT MSVC)
+    target_compile_options(dw_tests PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+endif()
 
 # --- Compiler warnings ---
 if(MSVC)

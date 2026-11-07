@@ -8,6 +8,9 @@
 #include "ui/UIOverlay.h"
 
 #include <SDL.h>
+#ifdef DW_TEST_DRIVER
+#include "core/TestDriver.h"
+#endif
 #include <glad/gl.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -19,7 +22,61 @@
 
 namespace dw {
 
+#ifdef DW_TEST_DRIVER
+bool Scene::debugAimAtPainting(const std::string& id) {
+    const Painting* target = nullptr;
+    for (const Painting& p : m_paintings)
+        if (p.id == id) target = &p;
+    if (!target) {
+        std::cerr << "DRIVER aim: no painting '" << id << "'\n";
+        return false;
+    }
+    // About 3 units out along the normal where it fits. A frame in a corner can sit
+    // outside the walkable area, so then slide sideways along the wall; failing that,
+    // take the farthest point on the normal that fits.
+    const float standOff = 3.0f, farthest = 15.0f, step = 0.1f, maxSlide = 2.0f;
+    const glm::vec3 n = target->normal, r = target->right;
+    auto spot = [&](float d, float slide) {
+        return glm::vec3(target->center.x + n.x * d + r.x * slide, 0.0f,
+                         target->center.z + n.z * d + r.z * slide);
+    };
+    auto fits = [&](const glm::vec3& v) { return m_player.debugCanStand(v.x, v.z); };
+    glm::vec3 pos(0.0f);
+    bool found = false;
+    for (float k = 0.0f; k <= maxSlide && !found; k += step) {
+        for (float slide : {k, -k}) {
+            if (fits(spot(standOff, slide))) { pos = spot(standOff, slide); found = true; break; }
+        }
+    }
+    for (float d = farthest; d >= 0.5f && !found; d -= step) {
+        if (fits(spot(d, 0.0f))) { pos = spot(d, 0.0f); found = true; }
+    }
+    if (!found) {
+        std::cerr << "DRIVER aim " << id << " unreachable\n";
+        return false;
+    }
+    const glm::vec3 to = target->center - glm::vec3(pos.x, m_currentRoom.eyeHeight, pos.z);
+    const float chosen = std::hypot(to.x, to.z);
+    const float yaw = std::atan2(to.x, to.z);
+    const float pitch = std::atan2(to.y, chosen);
+    if (std::fabs(pitch) > m_player.debugMaxPitch())
+        std::cerr << "DRIVER aim " << id << " pitch " << pitch << " exceeds the limit\n";
+    m_player.debugAim(pos, yaw, pitch);
+    std::cout << "DRIVER aim " << id << " standoff=" << chosen << " x=" << pos.x << " z=" << pos.z
+              << " pitch=" << pitch << "\n";
+    return true;
+}
+#endif
+
 namespace {
+// Scripted runs must not capture the mouse; real input spoils them.
+void setMouseGrab(SDL_bool grab) {
+#ifdef DW_TEST_DRIVER
+    if (g_testDriverActive) return;
+#endif
+    SDL_SetRelativeMouseMode(grab);
+}
+
 ParticleType parseParticleType(const std::string& s) {
     if (s == "fog") return ParticleType::Fog;
     if (s == "fireflies") return ParticleType::Fireflies;
@@ -48,6 +105,7 @@ bool Scene::init(Renderer& renderer) {
         std::cerr << "Scene: failed to init room transition\n";
         return false;
     }
+    m_transition.onResize(renderer.getWidth(), renderer.getHeight());
 
     if (!m_particles.init()) {
         std::cerr << "Scene: failed to init particle system\n";
@@ -69,7 +127,11 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
     m_activeBook = nullptr;
     m_worldItems.clear();
     m_nearItemIndex = -1;
+    m_nearPainting = -1;
+    m_artistView.reset();
     m_depthGeometry.reset();
+    m_paintingWall.shutdown();
+    m_paintings.clear();
 
     if (!loadRoomDef(roomDefPath, m_currentRoom)) {
         return false;
@@ -125,6 +187,14 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
         prop->itemIndex = propDef.itemIndex;
 
         m_props.push_back(std::move(prop));
+    }
+
+    // Artist paintings hung over the gallery's own. Any failure leaves the room as it was.
+    if (!m_currentRoom.paintingsPath.empty()) {
+        m_catalog.loadFromDirectory("assets/artists");
+        m_paintings = loadPaintings(m_currentRoom.paintingsPath, m_catalog);
+        m_paintingWall.setBrightness(m_currentRoom.paintingBrightness);
+        m_paintingWall.load(m_paintings, m_catalog);
     }
 
     // Load point lights from room definition
@@ -259,7 +329,7 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
     }
 
     // Set mouse mode based on first-person flag
-    SDL_SetRelativeMouseMode(m_currentRoom.firstPerson ? SDL_TRUE : SDL_FALSE);
+    setMouseGrab(m_currentRoom.firstPerson ? SDL_TRUE : SDL_FALSE);
 
     // Load room-specific ambient audio
     if (m_audio && !m_currentRoom.ambientAudioPath.empty()) {
@@ -347,14 +417,14 @@ void Scene::update(float dt, const InputManager& input, Renderer& renderer, Audi
                 // Unpause
                 m_paused = false;
                 if (m_currentRoom.firstPerson)
-                    SDL_SetRelativeMouseMode(SDL_TRUE);
+                    setMouseGrab(SDL_TRUE);
             }
         } else {
             m_paused = true;
             m_pauseScreen = PauseScreen::Main;
             m_pauseSelection = 0;
             m_pauseAlpha = 0.0f;
-            SDL_SetRelativeMouseMode(SDL_FALSE);
+            setMouseGrab(SDL_FALSE);
         }
         return;
     }
@@ -371,7 +441,7 @@ void Scene::update(float dt, const InputManager& input, Renderer& renderer, Audi
                 if (m_pauseSelection == 0) {
                     m_paused = false;
                     if (m_currentRoom.firstPerson)
-                        SDL_SetRelativeMouseMode(SDL_TRUE);
+                        setMouseGrab(SDL_TRUE);
                 } else if (m_pauseSelection == 1) {
                     m_pauseScreen = PauseScreen::Settings;
                     m_settingsSelection = 0;
@@ -475,6 +545,20 @@ void Scene::update(float dt, const InputManager& input, Renderer& renderer, Audi
         return;
     }
 
+    // If an artist view is open, only it updates (no walking, no picking)
+    if (m_artistView.isOpen()) {
+        m_nearPainting = -1;
+        int prevPage = m_artistView.currentPage();
+        m_artistView.update(dt, input);
+        if (m_artistView.isOpen() && m_artistView.currentPage() != prevPage) {
+            if (audio) audio->playSound("page_turn", 0.5f);
+        }
+        if (!m_artistView.isOpen()) {
+            if (audio) audio->playSound("book_open", 0.4f, 0.8f);
+        }
+        return;
+    }
+
     // Tab to open inventory
     if (input.isKeyPressed(SDL_SCANCODE_TAB)) {
         m_inventory.toggle();
@@ -554,8 +638,13 @@ void Scene::update(float dt, const InputManager& input, Renderer& renderer, Audi
         }
     }
 
+    // Painting under the crosshair
+    m_nearPainting = m_currentRoom.firstPerson
+        ? pickPainting(m_paintings, camPos, lookDir) : -1;
+
     // Smooth highlight animation
-    float targetHighlight = (m_nearBookIndex >= 0 || m_nearItemIndex >= 0) ? 1.0f : 0.0f;
+    float targetHighlight = (m_nearBookIndex >= 0 || m_nearItemIndex >= 0 || m_nearPainting >= 0)
+        ? 1.0f : 0.0f;
     m_highlightAmount += (targetHighlight - m_highlightAmount) * std::min(dt * 8.0f, 1.0f);
 
     // E to interact with nearby item (priority over book)
@@ -586,6 +675,14 @@ void Scene::update(float dt, const InputManager& input, Renderer& renderer, Audi
             }
             m_books[m_nearBookIndex]->open();
             m_activeBook = m_books[m_nearBookIndex].get();
+            if (audio) audio->playSound("book_open", 0.5f);
+        }
+    }
+    // E on a framed painting opens its artist on that painting's design
+    else if (m_nearPainting >= 0 && input.isKeyPressed(SDL_SCANCODE_E)) {
+        const Painting& painting = m_paintings[m_nearPainting];
+        if (const Artist* artist = m_catalog.find(painting.artistId)) {
+            m_artistView.open(*artist, painting.designIndex);
             if (audio) audio->playSound("book_open", 0.5f);
         }
     }
@@ -771,6 +868,9 @@ void Scene::renderObjects() {
         m_meshShader.setInt("uHasNormalMap", 0);
         m_player.render(m_meshShader);
     }
+
+    // Artist paintings hang over the gallery's own; they write depth and cast no shadow.
+    m_paintingWall.render(m_camera, m_nearPainting, m_highlightAmount);
 }
 
 void Scene::renderFMVOverlays() {
@@ -806,7 +906,7 @@ void Scene::renderUI(UIOverlay& ui, int screenWidth, int screenHeight) {
     }
 
     // Crosshair in FP mode (only when no book open)
-    if (m_currentRoom.firstPerson && !m_activeBook) {
+    if (m_currentRoom.firstPerson && !m_activeBook && !m_artistView.isOpen()) {
         ui.drawCrosshair();
     }
 
@@ -817,6 +917,15 @@ void Scene::renderUI(UIOverlay& ui, int screenWidth, int screenHeight) {
     // Show interaction prompt when looking at a book
     else if (m_nearBookIndex >= 0 && !m_activeBook) {
         ui.drawPrompt("Press E to read");
+    }
+    // Show interaction prompt when looking at a painting
+    else if (m_nearPainting >= 0 && !m_activeBook && !m_artistView.isOpen() && !m_paused) {
+        ui.drawPrompt("Press E to see the artist");
+    }
+
+    // Render the artist view
+    if (m_artistView.isOpen()) {
+        m_artistView.renderUI(ui, screenWidth, screenHeight);
     }
 
     // Render active book viewer
@@ -1123,6 +1232,7 @@ void Scene::shutdown() {
     m_triggers.clear();
     m_pointLights.clear();
     m_worldItems.clear();
+    m_paintingWall.shutdown();
 }
 
 } // namespace dw

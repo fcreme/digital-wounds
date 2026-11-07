@@ -17,6 +17,8 @@ public:
 
     // Flips by default for OpenGL's bottom-up UVs; UI quads are top-down and need flipVertically = false.
     bool load(const std::string& path, bool sRGB = false, bool flipVertically = true);
+    // Never flips (top-left UVs). Box-filters down by halves until the long side is at most maxSize.
+    bool loadScaled(const std::string& path, bool sRGB, int maxSize);
     bool loadFromMemory(const unsigned char* data, int length, bool sRGB = false);
     void bind(GLenum unit = GL_TEXTURE0) const;
     void destroy();

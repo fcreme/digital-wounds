@@ -129,6 +129,10 @@ struct RoomDef {
 
     bool firstPerson = false;
 
+    // Optional framed-painting layout (empty = none) and its brightness
+    std::string paintingsPath;
+    float paintingBrightness = 1.0f;
+
     // Player
     float eyeHeight = 1.7f;
     glm::vec3 playerSpawn{0.0f};

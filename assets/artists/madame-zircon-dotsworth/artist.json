@@ -1,0 +1,42 @@
+{
+  "name": "Madame Zircon Dotsworth",
+  "description": "Sacred geometry built from a hundred thousand dots. She claims to have counted every one of them.",
+  "designs": [
+    {
+      "id": "lotus-mandala",
+      "title": "Lotus Mandala",
+      "description": "Rings of stippled petals opening from a black centre. A classic for the back of the hand or the sternum.",
+      "image": "lotus-mandala.png"
+    },
+    {
+      "id": "sun-wheel",
+      "title": "Sun Wheel",
+      "description": "A dot-shaded disc with a wheel of triangles at its heart and rays like black blades.",
+      "image": "sun-wheel.png"
+    },
+    {
+      "id": "flower-of-life",
+      "title": "Flower of Life",
+      "description": "The old six-petal lattice, darkening in dots towards its rim, inside a ring of thorns.",
+      "image": "flower-of-life.png"
+    },
+    {
+      "id": "sri-triangles",
+      "title": "Nested Triangles",
+      "description": "Interlocked triangles descending to one black point, every band shaded with stipple.",
+      "image": "sri-triangles.png"
+    },
+    {
+      "id": "moon-mandala",
+      "title": "Moon Mandala",
+      "description": "A stippled moon circled by every phase and eight small stars. For night owls.",
+      "image": "moon-mandala.png"
+    },
+    {
+      "id": "stippled-orb",
+      "title": "Stippled Orb",
+      "description": "A dot-shaded sphere bound in three crossing orbits, with scattered stars around it.",
+      "image": "stippled-orb.png"
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "name": "Prismella Leadglass",
+  "description": "Heavy leading and patterned panes. Every shape is split into cells and filled with something different.",
+  "designs": [
+    {
+      "id": "rose-window",
+      "title": "Rose Window",
+      "description": "A round church window of petals and patterned panes. Fills a whole shoulder blade.",
+      "image": "rose-window.png"
+    },
+    {
+      "id": "glass-butterfly",
+      "title": "Glass Butterfly",
+      "description": "A butterfly with heavily leaded wings, panes of black, hatching and dots radiating out.",
+      "image": "glass-butterfly.png"
+    },
+    {
+      "id": "lancet-lily",
+      "title": "Lancet Lily",
+      "description": "A lily rising in a pointed arch against a diamond lattice. Tall and thin, made for the forearm.",
+      "image": "lancet-lily.png"
+    },
+    {
+      "id": "glass-fish",
+      "title": "Glass Fish",
+      "description": "A round fish made of honeycomb panes, with a plain head and one very surprised eye.",
+      "image": "glass-fish.png"
+    },
+    {
+      "id": "glass-heart",
+      "title": "Glass Heart",
+      "description": "A heart cut into a wheel of leaded panes around a small black star. Fragile on purpose.",
+      "image": "glass-heart.png"
+    },
+    {
+      "id": "sun-lancet",
+      "title": "Sunrise Window",
+      "description": "A black sun coming up over two hills, with rays of patterned glass above it.",
+      "image": "sun-lancet.png"
+    }
+  ]
+}

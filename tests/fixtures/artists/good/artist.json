@@ -1,0 +1,4 @@
+{ "name": "Dark Ink Studio", "description": "Black and grey work.",
+  "designs": [
+    { "id": "ravens-eye", "title": "The Ravens Eye", "description": "A watchful raven.", "image": "a.png" },
+    { "id": "thorn", "title": "Thorn Crown", "description": "Thorns in a ring.", "image": "b.png" } ] }

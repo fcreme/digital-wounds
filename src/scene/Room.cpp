@@ -54,6 +54,8 @@ bool loadRoomDef(const std::string& path, RoomDef& out) {
     out.depthGeometryPath = getOr<std::string>(j, "depth_geometry", "");
     out.ambientAudioPath = getOr<std::string>(j, "ambient_audio", "");
     out.firstPerson = getOr<bool>(j, "first_person", false);
+    out.paintingsPath = getOr<std::string>(j, "paintings", "");
+    out.paintingBrightness = getOr<float>(j, "painting_brightness", 1.0f);
 
     // Player
     out.eyeHeight = getOr<float>(j, "eye_height", 1.7f);

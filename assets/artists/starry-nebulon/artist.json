@@ -1,0 +1,42 @@
+{
+  "name": "Starry Nebulon Quasarpants",
+  "description": "Night windows, orbit lines and star charts. Has never been to space, but has strong opinions on it.",
+  "designs": [
+    {
+      "id": "ringed-planet",
+      "title": "Ringed Planet",
+      "description": "A banded planet with fine rings, cut out of a round black night full of stars.",
+      "image": "ringed-planet.png"
+    },
+    {
+      "id": "moon-phases",
+      "title": "Moon Phases",
+      "description": "Five phases of the moon across a black band, with a small row of stars above and below.",
+      "image": "moon-phases.png"
+    },
+    {
+      "id": "great-comet",
+      "title": "Great Comet",
+      "description": "A stippled comet head trailing a long black fan of tail through a few sharp stars.",
+      "image": "great-comet.png"
+    },
+    {
+      "id": "total-eclipse",
+      "title": "Total Eclipse",
+      "description": "A black disc with a wild corona flaring around it and small stars set into the dark.",
+      "image": "total-eclipse.png"
+    },
+    {
+      "id": "constellation-chart",
+      "title": "Constellation Chart",
+      "description": "A round star chart with four made-up constellations on a dotted grid and a ticked rim.",
+      "image": "constellation-chart.png"
+    },
+    {
+      "id": "orbit-diagram",
+      "title": "Orbit Diagram",
+      "description": "Four thin orbits around a rayed sun, each carrying a different small world.",
+      "image": "orbit-diagram.png"
+    }
+  ]
+}

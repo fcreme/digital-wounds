@@ -1,0 +1,74 @@
+<style>
+  .scr { background:#0d0b09; color:#e8dcc4; aspect-ratio:16/9; border-radius:4px; overflow:hidden; position:relative; font-family:Georgia,serif; display:flex; box-sizing:border-box; }
+  .scr * { box-sizing:border-box; }
+  .nm { font-size:clamp(14px,2.2vw,22px); letter-spacing:.06em; color:#f1e4c8; line-height:1.15; }
+  .bio { font-size:clamp(8px,1vw,11px); color:#a89a80; line-height:1.4; }
+  .ttl { font-size:clamp(9px,1.1vw,12px); color:#d6c7a8; }
+  .hint { position:absolute; bottom:5px; left:0; right:0; text-align:center; font:clamp(7px,.8vw,9px) monospace; color:#7d7160; }
+  .d { background:#e6dcc8; display:flex; align-items:center; justify-content:center; min-width:0; min-height:0; overflow:hidden; }
+  .d svg { width:72%; height:72%; display:block; }
+  .on { outline:2px solid #c9a24d; outline-offset:1px; }
+  .flow { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:0 0 18px; font-size:14px; }
+  .flow b { background:#26221c; color:#e8dcc4; padding:6px 10px; border-radius:4px; font-weight:normal; }
+  .stand { font-size:13px; opacity:.75; margin-top:14px; }
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="eye" viewBox="0 0 100 100"><path d="M8 50Q50 10 92 50Q50 90 8 50Z" fill="none" stroke="#14110e" stroke-width="5"/><circle cx="50" cy="50" r="16" fill="#14110e"/><path d="M30 20l8 12M50 12v14M70 20l-8 12" stroke="#14110e" stroke-width="4"/></symbol>
+  <symbol id="skull" viewBox="0 0 100 100"><path d="M50 12C26 12 18 32 22 50c2 9 10 12 12 18v14h32V68c2-6 10-9 12-18 4-18-4-38-28-38Z" fill="#14110e"/><circle cx="38" cy="46" r="8" fill="#e6dcc8"/><circle cx="62" cy="46" r="8" fill="#e6dcc8"/><path d="M50 56l-4 9h8Z" fill="#e6dcc8"/></symbol>
+  <symbol id="snake" viewBox="0 0 100 100"><circle cx="50" cy="50" r="30" fill="none" stroke="#14110e" stroke-width="9" stroke-dasharray="170 18"/><path d="M68 18l14 4-8 12Z" fill="#14110e"/></symbol>
+  <symbol id="tree" viewBox="0 0 100 100"><circle cx="62" cy="28" r="17" fill="none" stroke="#14110e" stroke-width="3"/><path d="M48 92V52L30 30M48 62l18-18M48 52V24M38 40L24 42M56 52l16 2" fill="none" stroke="#14110e" stroke-width="6" stroke-linecap="round"/></symbol>
+</defs></svg>
+
+<h2>What should pressing E show?</h2>
+<p class="subtitle">All three use the same stand-in artist, taken from the old Dark Ink config in your repo. The drawings are placeholders. Click the one that feels closest.</p>
+
+<div class="flow"><span>In the gallery:</span><b>walk up to a painting</b><span>→</span><b>"Press E to see the artist"</b><span>→</span><b>this screen</b><span>→</span><b>Q goes back to the room</b></div>
+
+<div class="cards">
+  <div class="card" data-choice="wall" onclick="toggleSelect(this)">
+    <div class="card-image"><div class="scr" style="flex-direction:column;padding:4% 5% 6%">
+      <div class="nm">DARK INK STUDIO</div>
+      <div class="bio" style="margin:1% 0 3%">Where shadows become art. Blackwork, dark realism and occult-inspired design.</div>
+      <div style="flex:1;display:grid;grid-template-columns:repeat(4,1fr);gap:3%;min-height:0">
+        <div class="d on"><svg><use href="#eye"/></svg></div><div class="d"><svg><use href="#skull"/></svg></div><div class="d"><svg><use href="#snake"/></svg></div><div class="d"><svg><use href="#tree"/></svg></div>
+      </div>
+      <div class="hint">A/D select &nbsp; E enlarge &nbsp; Q back</div>
+    </div></div>
+    <div class="card-body"><h3>A. See everything at once</h3><p>Name on top and every design in a grid. You judge the artist's style at a glance, then enlarge one. Small when an artist has many designs.</p></div>
+  </div>
+
+  <div class="card" data-choice="book" onclick="toggleSelect(this)">
+    <div class="card-image"><div class="scr" style="padding:3% 5% 6%;gap:4%;align-items:stretch">
+      <div class="d" style="flex:0 0 46%"><svg><use href="#skull"/></svg></div>
+      <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:6%">
+        <div class="bio" style="letter-spacing:.14em">DARK INK STUDIO</div>
+        <div class="nm">Bone Garden</div>
+        <div class="bio">Floral skulls intertwined with thorned roses. A reminder that beauty grows from decay.</div>
+        <div class="bio">2 / 4</div>
+      </div>
+      <div class="hint">A/D turn page &nbsp; Q back</div>
+    </div></div>
+    <div class="card-body"><h3>B. One design at a time</h3><p>Like turning pages in a book, each design large with its story. The most atmospheric and closest to your existing book viewer, but you only see one at a time.</p></div>
+  </div>
+
+  <div class="card" data-choice="hybrid" onclick="toggleSelect(this)">
+    <div class="card-image"><div class="scr" style="padding:3% 4% 6%;gap:3%;align-items:stretch">
+      <div style="flex:0 0 27%;display:flex;flex-direction:column;gap:5%;justify-content:center">
+        <div class="nm">DARK INK STUDIO</div>
+        <div class="bio">Where shadows become art. Blackwork, dark realism and occult-inspired design.</div>
+        <div class="ttl" style="margin-top:6%">Bone Garden</div>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:3%;min-width:0">
+        <div class="d" style="flex:1"><svg><use href="#skull"/></svg></div>
+        <div style="flex:0 0 19%;display:flex;gap:2%;justify-content:center;min-height:0">
+          <div class="d" style="aspect-ratio:1"><svg><use href="#eye"/></svg></div><div class="d on" style="aspect-ratio:1"><svg><use href="#skull"/></svg></div><div class="d" style="aspect-ratio:1"><svg><use href="#snake"/></svg></div><div class="d" style="aspect-ratio:1"><svg><use href="#tree"/></svg></div>
+        </div>
+      </div>
+      <div class="hint">A/D next design &nbsp; Q back</div>
+    </div></div>
+    <div class="card-body"><h3>C. Artist beside a large design</h3><p>The name stays on screen, one design is large, and a strip shows the rest. It keeps both the artist and the work in view, but is the busiest of the three.</p></div>
+  </div>
+</div>
+
+<p class="stand">Not shown yet: how contact details or social links might appear. Tell me if those belong here.</p>

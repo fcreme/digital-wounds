@@ -13,8 +13,12 @@
 #include "fx/FMVOverlay.h"
 #include "world/Player.h"
 #include "world/Book.h"
+#include "ui/ArtistView.h"
 #include "world/Item.h"
 #include "world/Inventory.h"
+#include "world/ArtistCatalog.h"
+#include "world/PaintingData.h"
+#include "world/PaintingWall.h"
 
 #include <string>
 #include <memory>
@@ -59,6 +63,12 @@ public:
     void bindShadowUniforms(ShadowMap& shadowMap);
 
     Camera& getCamera() { return m_camera; }
+    // Keeps the room camera correct after the window or display changes.
+    void onResize(int drawableWidth, int drawableHeight) {
+        if (drawableWidth <= 0 || drawableHeight <= 0) return;  // minimized
+        m_camera.setAspect(static_cast<float>(drawableWidth) / static_cast<float>(drawableHeight));
+        m_transition.onResize(drawableWidth, drawableHeight);
+    }
     Player& getPlayer() { return m_player; }
     ParticleSystem& getParticleSystem() { return m_particles; }
     const RoomDef& getCurrentRoom() const { return m_currentRoom; }
@@ -66,6 +76,15 @@ public:
     void setSettings(const GameSettings& s);
     bool wantsQuit() const { return m_wantsQuit; }
     bool isPaused() const { return m_paused; }
+#ifdef DW_TEST_DRIVER
+    // Read-only views of the artist discovery state for the test driver.
+    int debugNearPainting() const { return m_nearPainting; }
+    const std::vector<Painting>& debugPaintings() const { return m_paintings; }
+    const ArtistView& debugArtistView() const { return m_artistView; }
+    glm::vec3 debugLookDirection() const { return m_player.getLookDirection(); }
+    // Stands the player in front of a painting, looking at its centre. False if none fits.
+    bool debugAimAtPainting(const std::string& id);
+#endif
 
 private:
     RoomDef m_currentRoom;
@@ -91,6 +110,13 @@ private:
     std::vector<std::unique_ptr<PropInstance>> m_props;
     std::vector<TriggerZone> m_triggers;
     std::vector<PointLightDef> m_pointLights;
+
+    // Framed artist paintings (only rooms with a "paintings" field)
+    ArtistCatalog m_catalog;
+    std::vector<Painting> m_paintings;
+    PaintingWall m_paintingWall;
+    ArtistView m_artistView;
+    int m_nearPainting = -1;  // painting under the crosshair, -1 if none
 
     // Depth pre-pass hidden geometry
     std::unique_ptr<Model> m_depthGeometry;
