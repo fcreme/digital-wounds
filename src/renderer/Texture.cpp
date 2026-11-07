@@ -7,6 +7,22 @@
 
 namespace dw {
 
+namespace {
+
+// Walls and floors are seen at grazing angles, where plain trilinear filtering picks a
+// mip level for the blurriest direction. Anisotropic filtering keeps them sharp.
+void applyAnisotropy() {
+    if (!GLAD_GL_EXT_texture_filter_anisotropic && !GLAD_GL_ARB_texture_filter_anisotropic) return;
+    static float maxAniso = 0.0f;
+    if (maxAniso == 0.0f) {
+        glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY, &maxAniso);
+        if (maxAniso < 1.0f) maxAniso = 1.0f;
+    }
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, std::min(maxAniso, 16.0f));
+}
+
+} // anonymous namespace
+
 Texture::~Texture() { destroy(); }
 
 Texture::Texture(Texture&& other) noexcept
@@ -44,6 +60,7 @@ bool Texture::load(const std::string& path, bool sRGB, bool flipVertically) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    applyAnisotropy();
 
     stbi_image_free(data);
     return true;
@@ -91,6 +108,7 @@ bool Texture::loadScaled(const std::string& path, bool sRGB, int maxSize) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    applyAnisotropy();
     return true;
 }
 
@@ -115,6 +133,7 @@ bool Texture::loadFromMemory(const unsigned char* data, int length, bool sRGB) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    applyAnisotropy();
 
     stbi_image_free(pixels);
     return true;
