@@ -966,10 +966,22 @@ void Scene::renderUI(UIOverlay& ui, int screenWidth, int screenHeight) {
         float sw = static_cast<float>(screenWidth);
         float sh = static_cast<float>(screenHeight);
 
-        // Dark overlay
-        ui.drawRect(0.0f, 0.0f, sw, sh, glm::vec4(0.0f, 0.0f, 0.0f, 0.7f * a));
+        // Dark overlay, then a solid panel behind the menu so bright paintings never show through it
+        ui.drawRect(0.0f, 0.0f, sw, sh, glm::vec4(0.0f, 0.0f, 0.0f, 0.78f * a));
+        const glm::vec4 panelColor(0.06f, 0.05f, 0.045f, 0.92f * a);
+        const glm::vec4 idleColor(0.84f, 0.79f, 0.7f, 0.92f * a);   // unselected items
+        const glm::vec4 hintColor(0.7f, 0.65f, 0.56f, 0.85f * a);
+        auto panel = [&](float x0, float y0, float x1, float y1) {
+            ui.drawRect(x0, y0, x1 - x0, y1 - y0, panelColor);
+            ui.drawRect(x0, y0, x1 - x0, 2.0f, glm::vec4(0.9f, 0.7f, 0.3f, 0.35f * a));  // thin gold rule
+            ui.drawRect(x0, y1 - 2.0f, x1 - x0, 2.0f, glm::vec4(0.9f, 0.7f, 0.3f, 0.35f * a));
+        };
 
         if (m_pauseScreen == PauseScreen::Main) {
+            const float panelW = std::max(ui.textWidth("W/S: Select   Enter: Confirm   Esc: Resume", 1.5f),
+                                          ui.textWidth("PAUSED", 3.5f)) + 120.0f;
+            panel((sw - panelW) * 0.5f, sh * 0.3f - 50.0f, (sw + panelW) * 0.5f,
+                  std::max(sh * 0.45f + 3 * 50.0f + 30.0f, sh * 0.78f + 12.0f + 40.0f));
             // Title
             float titleScale = 3.5f;
             std::string title = "PAUSED";
@@ -997,8 +1009,7 @@ void Scene::renderUI(UIOverlay& ui, int screenWidth, int screenHeight) {
                     ui.drawText(label, x, y, itemScale,
                                 glm::vec4(1.0f, 0.85f, 0.4f, a));
                 } else {
-                    ui.drawText(label, x, y, itemScale,
-                                glm::vec4(0.6f, 0.55f, 0.5f, 0.7f * a));
+                    ui.drawText(label, x, y, itemScale, idleColor);
                 }
             }
 
@@ -1006,11 +1017,11 @@ void Scene::renderUI(UIOverlay& ui, int screenWidth, int screenHeight) {
             std::string hint = "W/S: Select   Enter: Confirm   Esc: Resume";
             float hintScale = 1.5f;
             float hintW = ui.textWidth(hint, hintScale);
-            ui.drawText(hint, (sw - hintW) * 0.5f, sh * 0.78f, hintScale,
-                        glm::vec4(0.5f, 0.45f, 0.4f, 0.6f * a));
+            ui.drawText(hint, (sw - hintW) * 0.5f, sh * 0.78f, hintScale, hintColor);
 
         } else {
             // Settings screen
+            panel(sw * 0.15f - 60.0f, sh * 0.15f - 40.0f, sw * 0.87f + 60.0f, sh * 0.85f + 12.0f + 40.0f);
             float titleScale = 3.5f;
             std::string title = "SETTINGS";
             float titleW = ui.textWidth(title, titleScale);
@@ -1055,7 +1066,7 @@ void Scene::renderUI(UIOverlay& ui, int screenWidth, int screenHeight) {
 
                 glm::vec4 textColor = selected
                     ? glm::vec4(1.0f, 0.85f, 0.4f, a)
-                    : glm::vec4(0.6f, 0.55f, 0.5f, 0.7f * a);
+                    : idleColor;
 
                 // Highlight bar for selected row
                 if (selected) {
@@ -1097,8 +1108,7 @@ void Scene::renderUI(UIOverlay& ui, int screenWidth, int screenHeight) {
             std::string hint = "W/S: Select   A/D: Adjust   Esc: Back";
             float hintScale = 1.5f;
             float hintW = ui.textWidth(hint, hintScale);
-            ui.drawText(hint, (sw - hintW) * 0.5f, sh * 0.85f, hintScale,
-                        glm::vec4(0.5f, 0.45f, 0.4f, 0.6f * a));
+            ui.drawText(hint, (sw - hintW) * 0.5f, sh * 0.85f, hintScale, hintColor);
         }
     }
 }
