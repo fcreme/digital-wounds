@@ -117,6 +117,7 @@ bool loadRoomDef(const std::string& path, RoomDef& out) {
             RoomPropDef pd;
             pd.modelPath = getOr<std::string>(pr, "model", "");
             pd.texturePath = getOr<std::string>(pr, "texture", "");
+            pd.emissiveTexturePath = getOr<std::string>(pr, "emissive_texture", "");
             if (pr.contains("position")) pd.position = parseVec3(pr["position"]);
             if (pr.contains("rotation")) pd.rotation = parseVec3(pr["rotation"]);
             if (pr.contains("scale")) pd.scale = parseVec3(pr["scale"]);

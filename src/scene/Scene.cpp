@@ -161,6 +161,11 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
                 std::cerr << "Scene: failed to load model: " << propDef.modelPath << "\n";
                 continue;
             }
+            if (!propDef.emissiveTexturePath.empty() &&
+                !prop->model->replaceEmissiveMap(propDef.emissiveTexturePath)) {
+                std::cerr << "Scene: could not use emissive_texture " << propDef.emissiveTexturePath
+                          << "; keeping the model's own\n";
+            }
         }
 
         if (!propDef.texturePath.empty()) prop->texture.load(propDef.texturePath);

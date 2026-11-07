@@ -26,6 +26,20 @@ static std::string resolveTexturePath(const std::string& modelDir, const aiStrin
     return texPath; // return original, let Texture::load() report the error
 }
 
+bool Model::replaceEmissiveMap(const std::string& path) {
+    int replaced = 0;
+    for (auto& sm : m_submeshes) {
+        if (sm->emissiveMap.getID() == 0) continue;
+        Texture tex;
+        // Same orientation as the embedded maps: the importer already flips UVs.
+        if (!tex.load(path, true, false)) return replaced > 0;
+        sm->emissiveMap = std::move(tex);
+        replaced++;
+    }
+    std::cout << "Model: emissive map replaced from " << path << " on " << replaced << " submeshes\n";
+    return replaced > 0;
+}
+
 bool Model::load(const std::string& path) {
     Assimp::Importer importer;
 

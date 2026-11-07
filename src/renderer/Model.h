@@ -22,6 +22,9 @@ public:
     Model& operator=(Model&&) = default;
 
     bool load(const std::string& path);
+    // Loads the image at path into every submesh that already has an emissive map, keeping
+    // the model's UVs. Returns false, and keeps the old maps, if the image cannot be read.
+    bool replaceEmissiveMap(const std::string& path);
     void draw(Shader& shader, const glm::vec3& tint = glm::vec3(1.0f)) const;
 
 private:

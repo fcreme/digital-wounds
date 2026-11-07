@@ -10,6 +10,7 @@ namespace dw {
 struct RoomPropDef {
     std::string modelPath;
     std::string texturePath;
+    std::string emissiveTexturePath; // replaces the model's own emissive map (e.g. a sharper copy)
     glm::vec3 position{0.0f};
     glm::vec3 rotation{0.0f};  // euler degrees
     glm::vec3 scale{1.0f};

@@ -31,6 +31,7 @@
     "props": [
         {
             "model": "props/the_picture_gallery_low_poly__vr.glb",
+            "emissive_texture": "props/the_picture_gallery_emissive_x4.jpg",
             "position": [0.0, 0.0, 0.0],
             "rotation": [0.0, 0.0, 0.0],
             "scale": [10.0, 10.0, 10.0],
