@@ -66,21 +66,12 @@ void ArtistView::renderUI(UIOverlay& ui, int screenW, int screenH) {
     }
 
     // Text column, centred vertically between the top and the hint.
-    const ArtistViewText t = layoutArtistViewText(m_artist, design, l);
+    const ArtistViewText t = layoutArtistViewText(m_artist, design, l, ui.font());
     const float avail = l.hintY - l.textTopY;
     const float y0 = l.textTopY + std::max(0.0f, (avail - t.height) * 0.5f);
     auto lines = [&](const std::vector<std::string>& v, float y, float scale, float lineH,
                      const glm::vec4& c, float spacing) {
-        for (size_t i = 0; i < v.size(); i++) {
-            const float ly = y + i * lineH;
-            if (spacing <= 0.0f) {
-                ui.drawText(v[i], l.textX, ly, scale, c);
-            } else {
-                const float step = 8.0f * scale * (1.0f + spacing);
-                for (size_t k = 0; k < v[i].size(); k++)
-                    ui.drawText(std::string(1, v[i][k]), l.textX + k * step, ly, scale, c);
-            }
-        }
+        for (size_t i = 0; i < v.size(); i++) ui.drawText(v[i], l.textX, y + i * lineH, scale, c, spacing);
     };
     lines(t.name, y0 + t.nameY, l.nameScale, 8.0f * l.nameScale * 1.5f,
           glm::vec4(0.78f, 0.7f, 0.5f, a), ARTIST_NAME_SPACING);
@@ -94,7 +85,7 @@ void ArtistView::renderUI(UIOverlay& ui, int screenW, int screenH) {
                 y0 + t.pageY, l.bodyScale, glm::vec4(0.65f, 0.6f, 0.5f, a));
 
     const std::string hint = "A/D: Turn page   Q: Close";
-    const float hintW = hint.size() * 8.0f * l.hintScale;
+    const float hintW = ui.textWidth(hint, l.hintScale);
     ui.drawText(hint, (screenW - hintW) * 0.5f, l.hintY, l.hintScale,
                 glm::vec4(0.5f, 0.5f, 0.4f, a * 0.8f));
 }

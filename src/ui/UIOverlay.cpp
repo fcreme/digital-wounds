@@ -1,11 +1,31 @@
 #include "ui/UIOverlay.h"
+#include "utils/Utf8.h"
+
+#include "stb_truetype.h"
 
 #include <glad/gl.h>
+#include <algorithm>
 #include <cstring>
 #include <iostream>
 #include <cmath>
 
 namespace dw {
+
+namespace {
+constexpr int ASCII_FIRST = 32, ASCII_COUNT = 95;    // ' ' .. '~'
+constexpr int LATIN_FIRST = 160, LATIN_COUNT = 96;   // U+00A0 .. U+00FF
+}
+
+struct UIOverlay::GlyphAtlas {
+    GLuint texture = 0;
+    int width = 0, height = 0;
+    stbtt_packedchar ascii[ASCII_COUNT]{};
+    stbtt_packedchar latin[LATIN_COUNT]{};
+    ~GlyphAtlas() { if (texture) glDeleteTextures(1, &texture); }
+};
+
+UIOverlay::UIOverlay() = default;
+UIOverlay::~UIOverlay() = default;
 
 bool UIOverlay::init(int screenWidth, int screenHeight) {
     m_screenWidth = screenWidth;
@@ -39,8 +59,82 @@ bool UIOverlay::init(int screenWidth, int screenHeight) {
 
     initFont();
 
+    // TrueType text: anti-aliased coverage atlas, one buffer per string.
+    if (m_textShader.loadFromFile("assets/shaders/ui_font.vert", "assets/shaders/ui_text.frag") &&
+        m_font.loadFile(UI_FONT_PATH)) {
+        glGenVertexArrays(1, &m_textVao);
+        glGenBuffers(1, &m_textVbo);
+        glBindVertexArray(m_textVao);
+        glBindBuffer(GL_ARRAY_BUFFER, m_textVbo);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+        glBindVertexArray(0);
+    } else {
+        m_font = FontMetrics();
+        std::cerr << "UIOverlay: TrueType font unavailable, using the built-in bitmap font\n";
+    }
+
     std::cout << "UIOverlay initialized\n";
     return true;
+}
+
+void UIOverlay::setPixelRatio(float ratio) {
+    if (ratio <= 0.0f) ratio = 1.0f;
+    if (std::fabs(ratio - m_pixelRatio) < 1e-4f) return;
+    m_pixelRatio = ratio;
+    clearAtlases();  // baked at the old density
+}
+
+void UIOverlay::clearAtlases() { m_atlases.clear(); }
+
+const UIOverlay::GlyphAtlas* UIOverlay::atlasFor(float scale) {
+    const auto* info = static_cast<const stbtt_fontinfo*>(m_font.info());
+    if (!info) return nullptr;
+    int ascent, descent, gap;
+    stbtt_GetFontVMetrics(info, &ascent, &descent, &gap);
+    // stbtt sizes fonts by ascent-to-descent height in pixels.
+    const float pixelHeight = m_font.unitScale(scale) * m_pixelRatio * static_cast<float>(ascent - descent);
+    const int key = static_cast<int>(std::lround(pixelHeight * 4.0f));
+    auto it = m_atlases.find(key);
+    if (it != m_atlases.end()) return it->second.get();
+
+    auto atlas = std::make_unique<GlyphAtlas>();
+    const unsigned char* data = m_font.data().data();
+    for (int side = 256;; side *= 2) {
+        std::vector<unsigned char> pixels(static_cast<size_t>(side) * side, 0);
+        stbtt_pack_context pc;
+        if (!stbtt_PackBegin(&pc, pixels.data(), side, side, 0, 1, nullptr)) return nullptr;
+        stbtt_PackSetOversampling(&pc, 1, 1);
+        stbtt_pack_range ranges[2]{};
+        ranges[0].font_size = pixelHeight;
+        ranges[0].first_unicode_codepoint_in_range = ASCII_FIRST;
+        ranges[0].num_chars = ASCII_COUNT;
+        ranges[0].chardata_for_range = atlas->ascii;
+        ranges[1].font_size = pixelHeight;
+        ranges[1].first_unicode_codepoint_in_range = LATIN_FIRST;
+        ranges[1].num_chars = LATIN_COUNT;
+        ranges[1].chardata_for_range = atlas->latin;
+        const int ok = stbtt_PackFontRanges(&pc, data, 0, ranges, 2);
+        stbtt_PackEnd(&pc);
+        if (!ok && side < 4096) continue;  // did not fit: try a bigger sheet
+
+        atlas->width = atlas->height = side;
+        glGenTextures(1, &atlas->texture);
+        glBindTexture(GL_TEXTURE_2D, atlas->texture);
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, side, side, 0, GL_RED, GL_UNSIGNED_BYTE, pixels.data());
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        break;
+    }
+    const GlyphAtlas* result = atlas.get();
+    m_atlases[key] = std::move(atlas);
+    return result;
 }
 
 void UIOverlay::initFont() {
@@ -237,7 +331,70 @@ void UIOverlay::drawTexturedRect(float x, float y, float w, float h, GLuint text
     glEnable(GL_DEPTH_TEST);
 }
 
-void UIOverlay::drawText(const std::string& text, float x, float y, float scale, const glm::vec4& color) {
+float UIOverlay::textWidth(const std::string& text, float scale, float spacing) const {
+    if (m_font.loaded()) return m_font.width(text, scale, spacing);
+    return text.size() * 8.0f * scale * (1.0f + spacing);  // bitmap font: one cell per byte
+}
+
+void UIOverlay::drawText(const std::string& text, float x, float y, float scale, const glm::vec4& color,
+                         float spacing) {
+    const GlyphAtlas* atlas = m_font.loaded() ? atlasFor(scale) : nullptr;
+    if (!atlas) {
+        drawBitmapText(text, x, y, scale, color, spacing);
+        return;
+    }
+
+    std::vector<uint32_t> cps = decodeUtf8(text);
+    for (uint32_t& cp : cps) if (!isUiDrawable(cp)) cp = '?';
+
+    m_textVerts.clear();
+    float penX = x;
+    const float baselineY = y + m_font.baseline(scale);
+    for (size_t i = 0; i < cps.size(); i++) {
+        const uint32_t cp = cps[i];
+        const stbtt_packedchar* chars = cp < 128 ? atlas->ascii : atlas->latin;
+        const int index = static_cast<int>(cp) - (cp < 128 ? ASCII_FIRST : LATIN_FIRST);
+
+        // Place the glyph in drawable pixels so it lands on whole pixels, then go back to UI units.
+        float px = penX * m_pixelRatio, py = baselineY * m_pixelRatio;
+        stbtt_aligned_quad q;
+        stbtt_GetPackedQuad(chars, atlas->width, atlas->height, index, &px, &py, &q, 1);
+        if (q.x1 > q.x0 && q.y1 > q.y0) {
+            const float x0 = (q.x0 / m_pixelRatio / m_screenWidth) * 2.0f - 1.0f;
+            const float x1 = (q.x1 / m_pixelRatio / m_screenWidth) * 2.0f - 1.0f;
+            const float y0 = 1.0f - (q.y0 / m_pixelRatio / m_screenHeight) * 2.0f;
+            const float y1 = 1.0f - (q.y1 / m_pixelRatio / m_screenHeight) * 2.0f;
+            const float v[] = {
+                x0, y0, q.s0, q.t0,  x0, y1, q.s0, q.t1,  x1, y1, q.s1, q.t1,
+                x0, y0, q.s0, q.t0,  x1, y1, q.s1, q.t1,  x1, y0, q.s1, q.t0,
+            };
+            m_textVerts.insert(m_textVerts.end(), std::begin(v), std::end(v));
+        }
+        // Advance with the same metrics textWidth uses, so measured and drawn text agree.
+        penX += m_font.advance(cp, i + 1 < cps.size() ? cps[i + 1] : 0, scale) + spacing * 8.0f * scale;
+    }
+    if (m_textVerts.empty()) return;
+
+    glDisable(GL_DEPTH_TEST);
+    m_textShader.use();
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, atlas->texture);
+    m_textShader.setInt("uFont", 0);
+    m_textShader.setVec4("uColor", color.r, color.g, color.b, color.a);
+    glBindVertexArray(m_textVao);
+    glBindBuffer(GL_ARRAY_BUFFER, m_textVbo);
+    if (m_textVerts.size() > m_textVboFloats) {
+        m_textVboFloats = std::max(m_textVerts.size(), m_textVboFloats * 2);
+        glBufferData(GL_ARRAY_BUFFER, m_textVboFloats * sizeof(float), nullptr, GL_DYNAMIC_DRAW);
+    }
+    glBufferSubData(GL_ARRAY_BUFFER, 0, m_textVerts.size() * sizeof(float), m_textVerts.data());
+    glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(m_textVerts.size() / 4));
+    glBindVertexArray(0);
+    glEnable(GL_DEPTH_TEST);
+}
+
+void UIOverlay::drawBitmapText(const std::string& text, float x, float y, float scale, const glm::vec4& color,
+                               float spacing) {
     glDisable(GL_DEPTH_TEST);
     m_fontShader.use();
     glActiveTexture(GL_TEXTURE0);
@@ -281,7 +438,7 @@ void UIOverlay::drawText(const std::string& text, float x, float y, float scale,
         glBindVertexArray(m_quadVao);
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
-        curX += charW;
+        curX += charW * (1.0f + spacing);
     }
 
     glBindVertexArray(0);
@@ -296,7 +453,7 @@ void UIOverlay::drawPrompt(const std::string& text) {
 
     // Centered text
     float textScale = 3.0f;
-    float textW = text.length() * 8.0f * textScale;
+    float textW = textWidth(text, textScale);
     float textX = (m_screenWidth - textW) * 0.5f;
     float textY = barY + (barH - 8.0f * textScale) * 0.5f;
     drawText(text, textX, textY, textScale, glm::vec4(0.9f, 0.85f, 0.7f, 1.0f));
@@ -310,6 +467,9 @@ void UIOverlay::drawCrosshair() {
 
 void UIOverlay::shutdown() {
     if (m_fontTexture) { glDeleteTextures(1, &m_fontTexture); m_fontTexture = 0; }
+    clearAtlases();
+    if (m_textVbo) { glDeleteBuffers(1, &m_textVbo); m_textVbo = 0; }
+    if (m_textVao) { glDeleteVertexArrays(1, &m_textVao); m_textVao = 0; }
     if (m_quadVbo) { glDeleteBuffers(1, &m_quadVbo); m_quadVbo = 0; }
     if (m_quadVao) { glDeleteVertexArrays(1, &m_quadVao); m_quadVao = 0; }
 }

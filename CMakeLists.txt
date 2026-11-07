@@ -78,9 +78,13 @@ add_executable(dw_tests
     src/world/PaintingData.cpp
     tests/test_text_layout.cpp
     src/ui/TextLayout.cpp
+    src/ui/Font.cpp
+    src/utils/Utf8.cpp
     src/utils/stb_impl.cpp
 )
-target_compile_definitions(dw_tests PRIVATE DW_TEST_FIXTURES="${CMAKE_SOURCE_DIR}/tests/fixtures")
+target_compile_definitions(dw_tests PRIVATE
+    DW_TEST_FIXTURES="${CMAKE_SOURCE_DIR}/tests/fixtures"
+    DW_UI_FONT="${CMAKE_SOURCE_DIR}/assets/fonts/SpecialElite-Regular.ttf")
 target_include_directories(dw_tests PRIVATE
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/lib

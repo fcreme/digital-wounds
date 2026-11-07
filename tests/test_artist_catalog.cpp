@@ -1,5 +1,6 @@
 #include "test_util.h"
 #include "world/ArtistCatalog.h"
+#include "utils/Utf8.h"
 
 #include <algorithm>
 
@@ -64,7 +65,7 @@ TEST(tooLongTextIsTruncatedAndWarns) {
     CHECK(warned(c, "too-long"));
 }
 
-TEST(unsupportedCharactersWarn) {
+TEST(accentsAndAmpersandAreSupported) {
     ArtistCatalog c;
     c.loadFromDirectory(FIX);
     const Artist* a = c.find("accented");
@@ -72,8 +73,27 @@ TEST(unsupportedCharactersWarn) {
     if (!a) return;
     CHECK(a->name == "Jos\xC3\xA9");
     CHECK(a->designs[0].title == "Ink & Blood");
-    CHECK(warned(c, "Jos"));
-    CHECK(warned(c, "Ink & Blood"));
+    CHECK(!warned(c, "Jos"));
+    CHECK(!warned(c, "Ink & Blood"));
+}
+
+TEST(charactersOutsideTheFontWarn) {
+    ArtistCatalog c;
+    c.loadFromDirectory(FIX);
+    const Artist* a = c.find("unsupported");
+    CHECK(a != nullptr);  // still loaded; the UI shows '?' for those characters
+    if (!a) return;
+    CHECK(warned(c, "unsupported name: unsupported characters"));
+    CHECK(warned(c, "Arrow"));
+}
+
+TEST(truncationNeverSplitsACharacter) {
+    // 27 ASCII bytes then a two-byte e-acute: a 28-byte cut must drop the whole character.
+    const std::string s = std::string(27, 'a') + "\xC3\xA9" + "b";
+    CHECK(dw::truncateUtf8(s, 28) == std::string(27, 'a'));
+    CHECK(dw::truncateUtf8(s, 29) == std::string(27, 'a') + "\xC3\xA9");
+    CHECK(dw::truncateUtf8("short", 28) == "short");
+    CHECK(dw::isValidUtf8(dw::truncateUtf8(s, 28)));
 }
 
 TEST(artistsAreSortedById) {

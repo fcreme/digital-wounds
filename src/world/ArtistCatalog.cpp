@@ -1,4 +1,5 @@
 #include "world/ArtistCatalog.h"
+#include "utils/Utf8.h"
 
 #include <nlohmann/json.hpp>
 
@@ -22,16 +23,14 @@ void ArtistCatalog::warn(const std::string& msg) {
 }
 
 std::string ArtistCatalog::cleanText(const std::string& text, size_t maxChars, const std::string& what) {
-    std::string out = text;
-    if (out.size() > maxChars) {
-        out.resize(maxChars);
-        warn(what + ": text truncated to " + std::to_string(maxChars) + " characters: \"" + text + "\"");
-    }
-    // The UI font covers ASCII 32..122 with '&' left blank.
-    bool bad = std::any_of(out.begin(), out.end(), [](char ch) {
-        unsigned char c = static_cast<unsigned char>(ch);
-        return c < 32 || c > 122 || c == '&';
-    });
+    // Limits are in bytes; the cut never splits a UTF-8 character.
+    std::string out = dw::truncateUtf8(text, maxChars);
+    if (out.size() < text.size())
+        warn(what + ": text truncated to " + std::to_string(maxChars) + " bytes: \"" + text + "\"");
+    // The UI font draws printable ASCII and Latin-1 (accented letters included).
+    const std::vector<uint32_t> cps = dw::decodeUtf8(out);
+    bool bad = !dw::isValidUtf8(out) ||
+               std::any_of(cps.begin(), cps.end(), [](uint32_t cp) { return !dw::isUiDrawable(cp); });
     if (bad) warn(what + ": unsupported characters in \"" + out + "\"");
     return out;
 }

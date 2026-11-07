@@ -149,7 +149,7 @@ void Book::renderUI(UIOverlay& ui, int screenWidth, int screenHeight) {
     if (m_state == BookState::Open && !m_pages.empty()) {
         std::string pageStr = std::to_string(m_currentPage + 1) + "/" + std::to_string(m_pages.size());
         float textScale = 2.0f;
-        float textW = pageStr.length() * 8.0f * textScale;
+        float textW = ui.textWidth(pageStr, textScale);
         float textX = (screenWidth - textW) * 0.5f;
         float textY = scaledY + scaledH + 8.0f;
         ui.drawText(pageStr, textX, textY, textScale, glm::vec4(0.7f, 0.65f, 0.5f, alpha));
@@ -159,7 +159,7 @@ void Book::renderUI(UIOverlay& ui, int screenWidth, int screenHeight) {
     if (m_state == BookState::Open) {
         std::string hint = "A/D: Turn page   Q: Close";
         float hintScale = 1.5f;
-        float hintW = hint.length() * 8.0f * hintScale;
+        float hintW = ui.textWidth(hint, hintScale);
         float hintX = (screenWidth - hintW) * 0.5f;
         float hintY = scaledY + scaledH + 30.0f;
         ui.drawText(hint, hintX, hintY, hintScale, glm::vec4(0.5f, 0.5f, 0.4f, alpha * 0.8f));

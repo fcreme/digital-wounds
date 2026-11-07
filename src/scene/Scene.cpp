@@ -942,7 +942,7 @@ void Scene::renderUI(UIOverlay& ui, int screenWidth, int screenHeight) {
     if (m_lockedMessageTimer > 0.0f && !m_lockedMessage.empty()) {
         float alpha = std::min(m_lockedMessageTimer, 1.0f);
         float textScale = 2.5f;
-        float textW = m_lockedMessage.length() * 8.0f * textScale;
+        float textW = ui.textWidth(m_lockedMessage, textScale);
         float textX = (screenWidth - textW) * 0.5f;
         float textY = screenHeight * 0.4f;
         ui.drawText(m_lockedMessage, textX, textY, textScale,
@@ -953,7 +953,7 @@ void Scene::renderUI(UIOverlay& ui, int screenWidth, int screenHeight) {
     if (m_pickupMessageTimer > 0.0f && !m_pickupMessage.empty()) {
         float alpha = std::min(m_pickupMessageTimer, 1.0f);
         float textScale = 2.0f;
-        float textW = m_pickupMessage.length() * 8.0f * textScale;
+        float textW = ui.textWidth(m_pickupMessage, textScale);
         float textX = (screenWidth - textW) * 0.5f;
         float textY = screenHeight * 0.15f;
         ui.drawText(m_pickupMessage, textX, textY, textScale,
@@ -973,7 +973,7 @@ void Scene::renderUI(UIOverlay& ui, int screenWidth, int screenHeight) {
             // Title
             float titleScale = 3.5f;
             std::string title = "PAUSED";
-            float titleW = title.length() * 8.0f * titleScale;
+            float titleW = ui.textWidth(title, titleScale);
             ui.drawText(title, (sw - titleW) * 0.5f, sh * 0.3f, titleScale,
                         glm::vec4(0.9f, 0.85f, 0.7f, a));
 
@@ -985,7 +985,7 @@ void Scene::renderUI(UIOverlay& ui, int screenWidth, int screenHeight) {
 
             for (int i = 0; i < 3; i++) {
                 std::string label = items[i];
-                float labelW = label.length() * 8.0f * itemScale;
+                float labelW = ui.textWidth(label, itemScale);
                 float x = (sw - labelW) * 0.5f;
                 float y = itemY + i * itemSpacing;
 
@@ -1005,7 +1005,7 @@ void Scene::renderUI(UIOverlay& ui, int screenWidth, int screenHeight) {
             // Controls hint
             std::string hint = "W/S: Select   Enter: Confirm   Esc: Resume";
             float hintScale = 1.5f;
-            float hintW = hint.length() * 8.0f * hintScale;
+            float hintW = ui.textWidth(hint, hintScale);
             ui.drawText(hint, (sw - hintW) * 0.5f, sh * 0.78f, hintScale,
                         glm::vec4(0.5f, 0.45f, 0.4f, 0.6f * a));
 
@@ -1013,7 +1013,7 @@ void Scene::renderUI(UIOverlay& ui, int screenWidth, int screenHeight) {
             // Settings screen
             float titleScale = 3.5f;
             std::string title = "SETTINGS";
-            float titleW = title.length() * 8.0f * titleScale;
+            float titleW = ui.textWidth(title, titleScale);
             ui.drawText(title, (sw - titleW) * 0.5f, sh * 0.15f, titleScale,
                         glm::vec4(0.9f, 0.85f, 0.7f, a));
 
@@ -1067,7 +1067,7 @@ void Scene::renderUI(UIOverlay& ui, int screenWidth, int screenHeight) {
                 // Label
                 if (i == 5) {
                     // Center "Back"
-                    float backW = rows[i].label.length() * 8.0f * rowScale;
+                    float backW = ui.textWidth(rows[i].label, rowScale);
                     ui.drawText(rows[i].label, (sw - backW) * 0.5f, y, rowScale, textColor);
                 } else {
                     ui.drawText(rows[i].label, labelX, y, rowScale, textColor);
@@ -1096,7 +1096,7 @@ void Scene::renderUI(UIOverlay& ui, int screenWidth, int screenHeight) {
             // Controls hint
             std::string hint = "W/S: Select   A/D: Adjust   Esc: Back";
             float hintScale = 1.5f;
-            float hintW = hint.length() * 8.0f * hintScale;
+            float hintW = ui.textWidth(hint, hintScale);
             ui.drawText(hint, (sw - hintW) * 0.5f, sh * 0.85f, hintScale,
                         glm::vec4(0.5f, 0.45f, 0.4f, 0.6f * a));
         }

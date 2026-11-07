@@ -84,7 +84,7 @@ void TitleScreen::render(UIOverlay& ui, int screenWidth, int screenHeight) {
         if (titleAlpha > 0.0f) {
             const std::string title = "DIGITAL WOUNDS";
             float scale = 5.0f;
-            float textW = title.length() * 8.0f * scale;
+            float textW = ui.textWidth(title, scale);
             float x = (screenWidth - textW) * 0.5f;
             float y = screenHeight * 0.30f;
             ui.drawText(title, x, y, scale, glm::vec4(0.9f, 0.8f, 0.6f, titleAlpha));
@@ -96,7 +96,7 @@ void TitleScreen::render(UIOverlay& ui, int screenWidth, int screenHeight) {
         float pulse = 0.4f + 0.3f * std::sin(m_time * 2.5f);
         const std::string prompt = "Press Enter";
         float scale = 3.0f;
-        float textW = prompt.length() * 8.0f * scale;
+        float textW = ui.textWidth(prompt, scale);
         float x = (screenWidth - textW) * 0.5f;
         float y = screenHeight * 0.75f;
         ui.drawText(prompt, x, y, scale, glm::vec4(0.9f, 0.8f, 0.6f, pulse));

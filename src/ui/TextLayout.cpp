@@ -1,22 +1,34 @@
 #include "ui/TextLayout.h"
+#include "utils/Utf8.h"
 
 #include <algorithm>
-#include <cctype>
 #include <cmath>
 
-std::vector<std::string> wrapText(const std::string& text, size_t maxChars) {
-    if (maxChars == 0) maxChars = 1;
+namespace {
+
+bool isSpace(char c) { return c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\v' || c == '\f'; }
+
+// Byte length of the UTF-8 character starting at s[i] (1 for a malformed byte).
+size_t charLen(const std::string& s, size_t i) {
+    size_t n = 1;
+    while (i + n < s.size() && (static_cast<unsigned char>(s[i + n]) & 0xC0) == 0x80) n++;
+    return n;
+}
+
+} // anonymous namespace
+
+std::vector<std::string> wrapText(const std::string& text, float maxWidth, const TextMeasure& measure) {
     std::vector<std::string> lines;
     std::string line;
     size_t i = 0;
     while (i < text.size()) {
-        while (i < text.size() && std::isspace(static_cast<unsigned char>(text[i]))) i++;
+        while (i < text.size() && isSpace(text[i])) i++;
         size_t start = i;
-        while (i < text.size() && !std::isspace(static_cast<unsigned char>(text[i]))) i++;
+        while (i < text.size() && !isSpace(text[i])) i++;
         std::string word = text.substr(start, i - start);
         if (word.empty()) break;
 
-        if (!line.empty() && line.size() + 1 + word.size() <= maxChars) {
+        if (!line.empty() && measure(line + " " + word) <= maxWidth) {
             line += ' ';
             line += word;
             continue;
@@ -25,9 +37,17 @@ std::vector<std::string> wrapText(const std::string& text, size_t maxChars) {
             lines.push_back(line);
             line.clear();
         }
-        while (word.size() > maxChars) {
-            lines.push_back(word.substr(0, maxChars));
-            word.erase(0, maxChars);
+        // Cut words that are too wide on their own, keeping at least one character per piece.
+        while (measure(word) > maxWidth) {
+            size_t cut = charLen(word, 0);
+            if (cut >= word.size()) break;
+            for (;;) {
+                const size_t next = cut + charLen(word, cut);
+                if (next >= word.size() || measure(word.substr(0, next)) > maxWidth) break;
+                cut = next;
+            }
+            lines.push_back(word.substr(0, cut));
+            word.erase(0, cut);
         }
         line = word;
     }
@@ -35,9 +55,11 @@ std::vector<std::string> wrapText(const std::string& text, size_t maxChars) {
     return lines;
 }
 
-size_t charsPerLine(float textW, float scale, float spacing) {
-    float advance = 8.0f * scale * (1.0f + spacing);
-    return static_cast<size_t>(std::max(1.0f, std::floor(textW / advance)));
+std::vector<std::string> wrapText(const std::string& text, size_t maxChars) {
+    const float limit = static_cast<float>(std::max<size_t>(1, maxChars));
+    return wrapText(text, limit, [](const std::string& s) {
+        return static_cast<float>(dw::decodeUtf8(s).size());
+    });
 }
 
 ArtistViewLayout computeArtistViewLayout(int screenW, int screenH) {
@@ -70,14 +92,15 @@ float lineHeight(float scale) { return 8.0f * scale * 1.5f; }
 }
 
 ArtistViewText layoutArtistViewText(const Artist& artist, const ArtistDesign& design,
-                                    const ArtistViewLayout& l) {
+                                    const ArtistViewLayout& l, const dw::FontMetrics& font) {
     ArtistViewText t{};
-    std::string upper = artist.name;
-    for (char& c : upper) c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
-    t.name = wrapText(upper, charsPerLine(l.textW, l.nameScale, ARTIST_NAME_SPACING));
-    t.artistDesc = wrapText(artist.description, charsPerLine(l.textW, l.bodyScale));
-    t.title = wrapText(design.title, charsPerLine(l.textW, l.titleScale));
-    t.designDesc = wrapText(design.description, charsPerLine(l.textW, l.bodyScale));
+    auto wrap = [&](const std::string& text, float scale, float spacing) {
+        return wrapText(text, l.textW, [&](const std::string& s) { return font.width(s, scale, spacing); });
+    };
+    t.name = wrap(dw::upperLatin1(artist.name), l.nameScale, ARTIST_NAME_SPACING);
+    t.artistDesc = wrap(artist.description, l.bodyScale, 0.0f);
+    t.title = wrap(design.title, l.titleScale, 0.0f);
+    t.designDesc = wrap(design.description, l.bodyScale, 0.0f);
 
     const float gapSmall = l.bodyScale * 6.0f, gapBig = l.bodyScale * 12.0f;
     float y = 0.0f;
@@ -94,6 +117,7 @@ ArtistViewText layoutArtistViewText(const Artist& artist, const ArtistDesign& de
     return t;
 }
 
-float artistViewTextHeight(const Artist& artist, const ArtistDesign& design, const ArtistViewLayout& l) {
-    return layoutArtistViewText(artist, design, l).height;
+float artistViewTextHeight(const Artist& artist, const ArtistDesign& design, const ArtistViewLayout& l,
+                           const dw::FontMetrics& font) {
+    return layoutArtistViewText(artist, design, l, font).height;
 }

@@ -40,7 +40,7 @@ No code needed; rebuild only to copy assets.
 
 1. Make `assets/artists/<artist-id>/` holding `artist.json` and the design images (PNG, or any format stb_image reads).
 2. `artist.json` is `{"name", "description", "designs": [{"id", "title", "description", "image"}, ...]}`. Every `image` must exist in the folder.
-3. Limits, in bytes: name 28, description 120, design title 40, design description 200. Longer text is cut. The font draws only ASCII 32 to 122, and not `&`; other characters show as gaps. Accented names are not supported yet and must be done before the first artist who needs one.
+3. Limits, in bytes: name 28, description 120, design title 40, design description 200. Longer text is cut, never in the middle of a character. Write the files in UTF-8. The UI font (Special Elite, `assets/fonts/`) draws printable ASCII and the Latin-1 letters, so accents like `José` or `Muñoz` and `&` work; any other character shows as `?`. Accented letters take two bytes each toward the limits.
 4. To show the artist, edit a painting in `assets/paintings/museum.json`: set its `artist` to the folder name and `design` to a design `id`. Pressing E on that painting opens that design.
 5. The game logs a warning at load for each problem (cut text, bad characters, missing image, unknown artist or design); a bad painting entry is skipped.
 6. Real artists' images should be 2048 pixels on the long side: the full-screen view magnifies 1024-pixel images on large or Retina windows.

@@ -128,6 +128,7 @@ bool Engine::init(const std::string& title, int width, int height) {
         std::cerr << "Failed to init UI overlay\n";
         return false;
     }
+    m_ui->setPixelRatio(static_cast<float>(m_drawableWidth) / static_cast<float>(m_windowWidth));
 
     // Go straight into the gallery. TitleScreen is still supported: create it here
     // and leave m_gameState as TitleScreen to bring it back.
@@ -216,7 +217,10 @@ void Engine::processEvents() {
                     m_drawableHeight = dh;
                     m_renderer->onResize(m_drawableWidth, m_drawableHeight);
                     if (m_scene) m_scene->onResize(m_drawableWidth, m_drawableHeight);
-                    if (m_ui) m_ui->onResize(m_windowWidth, m_windowHeight);
+                    if (m_ui) {
+                        m_ui->onResize(m_windowWidth, m_windowHeight);
+                        m_ui->setPixelRatio(static_cast<float>(dw) / static_cast<float>(ww));
+                    }
                     if (m_titleScreen) m_titleScreen->onResize(m_windowWidth, m_windowHeight);
                 }
                 break;

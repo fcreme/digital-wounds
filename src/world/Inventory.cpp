@@ -132,7 +132,7 @@ void Inventory::renderUI(UIOverlay& ui, int screenWidth, int screenHeight) {
     // Title
     std::string title = "INVENTORY";
     float titleScale = 2.5f * scale;
-    float titleW = title.length() * 8.0f * titleScale;
+    float titleW = ui.textWidth(title, titleScale);
     float titleX = (screenWidth - titleW) * 0.5f;
     float titleY = scaledY + 12.0f * scale;
     ui.drawText(title, titleX, titleY, titleScale,
@@ -141,7 +141,7 @@ void Inventory::renderUI(UIOverlay& ui, int screenWidth, int screenHeight) {
     if (m_items.empty()) {
         std::string emptyMsg = "No items";
         float emptyScale = 1.8f * scale;
-        float emptyW = emptyMsg.length() * 8.0f * emptyScale;
+        float emptyW = ui.textWidth(emptyMsg, emptyScale);
         float emptyX = (screenWidth - emptyW) * 0.5f;
         float emptyY = scaledY + scaledH * 0.4f;
         ui.drawText(emptyMsg, emptyX, emptyY, emptyScale,
@@ -181,7 +181,7 @@ void Inventory::renderUI(UIOverlay& ui, int screenWidth, int screenHeight) {
                 // Fallback: draw first letter of name
                 std::string letter = m_items[i].name.empty() ? "?" : m_items[i].name.substr(0, 1);
                 float letterScale = 3.0f * scale;
-                float letterX = cx + (cellSize - 8.0f * letterScale) * 0.5f;
+                float letterX = cx + (cellSize - ui.textWidth(letter, letterScale)) * 0.5f;
                 float letterY = cy + (cellSize - 8.0f * letterScale) * 0.5f;
                 ui.drawText(letter, letterX, letterY, letterScale,
                             glm::vec4(0.7f, 0.6f, 0.4f, alpha));
@@ -204,14 +204,14 @@ void Inventory::renderUI(UIOverlay& ui, int screenWidth, int screenHeight) {
             float descY = gridStartY + maxRows * (cellSize + cellPad) + 10.0f * scale;
 
             float nameScale = 2.0f * scale;
-            float nameW = sel.name.length() * 8.0f * nameScale;
+            float nameW = ui.textWidth(sel.name, nameScale);
             float nameX = (screenWidth - nameW) * 0.5f;
             ui.drawText(sel.name, nameX, descY, nameScale,
                         glm::vec4(0.9f, 0.8f, 0.5f, alpha));
 
             if (!sel.description.empty()) {
                 float descScale = 1.5f * scale;
-                float descW = sel.description.length() * 8.0f * descScale;
+                float descW = ui.textWidth(sel.description, descScale);
                 float descX = (screenWidth - descW) * 0.5f;
                 ui.drawText(sel.description, descX, descY + 24.0f * scale, descScale,
                             glm::vec4(0.6f, 0.55f, 0.45f, alpha));
@@ -223,7 +223,7 @@ void Inventory::renderUI(UIOverlay& ui, int screenWidth, int screenHeight) {
     if (m_state == InventoryState::Open) {
         std::string hint = "A/D: Navigate   TAB/Q: Close";
         float hintScale = 1.5f * scale;
-        float hintW = hint.length() * 8.0f * hintScale;
+        float hintW = ui.textWidth(hint, hintScale);
         float hintX = (screenWidth - hintW) * 0.5f;
         float hintY = scaledY + scaledH - 24.0f * scale;
         ui.drawText(hint, hintX, hintY, hintScale,
