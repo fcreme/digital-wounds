@@ -49,6 +49,24 @@ uniform float uHighlight;
 uniform sampler2D uShadowMap;
 uniform int uUseShadows;
 
+// Detail texture: fine wood grain multiplied into walls and floor (mean 0.5 = no change).
+uniform int uDetailEnabled;
+uniform sampler2D uDetailMap;
+uniform float uDetailTile;      // world units per repeat
+uniform vec3 uDetailStrength;   // walls, floor, floor top height
+
+float detailFactor(vec3 p, vec3 n) {
+    vec3 an = abs(n);
+    float wall = 1.0 - smoothstep(0.3, 0.5, an.y);
+    float floorW = smoothstep(0.7, 0.9, an.y) * (1.0 - step(uDetailStrength.z, p.y));
+    if (wall + floorW <= 0.0) return 1.0;
+    vec3 t = normalize(vec3(-n.z, 0.0, n.x) + vec3(1e-5, 0.0, 0.0));
+    float g = 0.5;
+    if (wall > 0.0) g = texture(uDetailMap, vec2(dot(p, t), p.y) / uDetailTile).r;  // vertical boards
+    float gf = texture(uDetailMap, vec2(p.x + p.z, p.z - p.x) * 0.70710678 / uDetailTile).r;  // diagonal parquet
+    return 1.0 + 2.0 * (wall * uDetailStrength.x * (g - 0.5) + floorW * uDetailStrength.y * (gf - 0.5));
+}
+
 // Mood light: a multiplier on baked light. Keep identical in mesh.frag and painting.frag;
 // MAX_SPOTS must match MAX_MOOD_SPOTS in src/world/MoodLighting.h.
 #define MAX_SPOTS 32
@@ -181,6 +199,7 @@ void main() {
         result += uEmissive;
     }
 
+    if (uDetailEnabled != 0) result *= detailFactor(vWorldPos, normalize(vNormal));
     if (uMoodEnabled != 0) result *= moodLight(vWorldPos, normalize(vNormal));
 
     // Interaction highlight: emissive rim glow

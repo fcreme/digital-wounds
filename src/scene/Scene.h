@@ -116,6 +116,7 @@ private:
     std::vector<Painting> m_paintings;
     PaintingWall m_paintingWall;
     std::vector<SpotLight> m_moodSpots;
+    Texture m_detailTexture;  // room's detail grain, if any
     ArtistView m_artistView;
     int m_nearPainting = -1;  // painting under the crosshair, -1 if none
 

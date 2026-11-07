@@ -50,6 +50,13 @@
         "contrast": 1.0,
         "grain_strength": 0.0
     },
+    "detail": {
+        "texture": "assets/textures/detail_wood.png",
+        "tile": 1.4,
+        "wall_strength": 0.3,
+        "floor_strength": 0.22,
+        "floor_max_y": 1.0
+    },
     "mood": {
         "ambient": 0.3,
         "ceiling_start": 9.0,

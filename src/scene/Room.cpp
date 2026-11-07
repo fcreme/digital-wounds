@@ -246,6 +246,16 @@ bool loadRoomDef(const std::string& path, RoomDef& out) {
         m.maxSpots = getOr<int>(md, "max_spots", m.maxSpots);
     }
 
+    // Detail texture for walls and floor
+    if (j.contains("detail") && j["detail"].is_object()) {
+        auto& dt = j["detail"];
+        out.detail.texturePath = getOr<std::string>(dt, "texture", "");
+        out.detail.tile = getOr<float>(dt, "tile", out.detail.tile);
+        out.detail.wallStrength = getOr<float>(dt, "wall_strength", out.detail.wallStrength);
+        out.detail.floorStrength = getOr<float>(dt, "floor_strength", out.detail.floorStrength);
+        out.detail.floorMaxY = getOr<float>(dt, "floor_max_y", out.detail.floorMaxY);
+    }
+
     // Post-process overrides
     if (j.contains("post_process")) {
         auto& pp = j["post_process"];

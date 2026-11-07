@@ -183,6 +183,13 @@ struct RoomDef {
     // Fog parameters
     FogParamsDef fogParams;
     MoodDef mood;  // "mood" block; mood.defined is false without one
+    struct DetailDef {
+        std::string texturePath;    // empty = no detail texture
+        float tile = 2.0f;          // world units per repeat
+        float wallStrength = 0.5f;
+        float floorStrength = 0.45f;
+        float floorMaxY = 1.0f;     // surfaces facing up below this height count as floor
+    } detail;
 
     // Per-room post-process overrides
     PostProcessDef postProcess;

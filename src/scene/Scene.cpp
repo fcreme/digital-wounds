@@ -208,6 +208,11 @@ bool Scene::loadRoom(const std::string& roomDefPath, Renderer& renderer) {
         std::cout << "Scene: mood lighting with " << m_moodSpots.size() << " spotlights\n";
     }
     m_paintingWall.setMood(m_currentRoom.mood, m_moodSpots);
+    m_detailTexture.destroy();
+    if (!m_currentRoom.detail.texturePath.empty() &&
+        !m_detailTexture.load(m_currentRoom.detail.texturePath, false, false)) {
+        std::cerr << "Scene: detail texture not loaded; walls and floor stay as baked\n";
+    }
 
     // Load point lights from room definition
     for (const auto& pl : m_currentRoom.pointLights) {
@@ -808,6 +813,16 @@ void Scene::renderObjects() {
     m_meshShader.setVec3("uLightColor", m_currentRoom.lightColor.x, m_currentRoom.lightColor.y, m_currentRoom.lightColor.z);
 
     applyMoodUniforms(m_meshShader, m_currentRoom.mood, m_moodSpots);
+    const bool detail = m_detailTexture.getID() != 0;
+    m_meshShader.setInt("uDetailEnabled", detail ? 1 : 0);
+    if (detail) {
+        const auto& d = m_currentRoom.detail;
+        m_detailTexture.bind(GL_TEXTURE6);
+        m_meshShader.setInt("uDetailMap", 6);
+        m_meshShader.setFloat("uDetailTile", std::max(0.01f, d.tile));
+        m_meshShader.setVec3("uDetailStrength", d.wallStrength, d.floorStrength, d.floorMaxY);
+        glActiveTexture(GL_TEXTURE0);
+    }
 
     // Point lights
     int numLights = std::min(static_cast<int>(m_pointLights.size()), 8);

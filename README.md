@@ -106,6 +106,15 @@ legacy/                   # Original Three.js prototype (reference only)
 4. **FMV overlays** — Render animation loops (fog, water, fire) as video files
 5. **Room definitions** — JSON files specifying camera, background, collision, and props per room
 
+## Tuning the gallery's look
+
+All of it lives in `assets/rooms/museum.json`; rebuild to copy the change, no code needed.
+
+- `emissive_texture` on the gallery prop: the sharper 4x room texture. Remove the line for the model's original.
+- `mood`: multiplies the baked room light and the paintings. `ambient` is the base level, `ceiling_*` fades it toward the ceiling, and `spot_*` sets the warm lamps the game hangs over each run of paintings (`max_spots` up to 32). Remove the block to light the room as it was baked.
+- `fog`: black distance fog. `density` is its strength (0 turns it off) and `max_distance` how far it reaches.
+- `detail`: fine wood grain on walls (`wall_strength`) and floor (`floor_strength`), repeating every `tile` units. The texture comes from `python3 tools/gen_detail_textures.py`.
+
 ## Adding an artist
 
 Artists are data; adding one needs no code and no rebuild of the game, only of the assets copy.
