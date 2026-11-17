@@ -1,0 +1,28 @@
+# Walk up to walls and photograph them from closer than 2 units, where the
+# post-process treats pixels as scene geometry. tests/check_wall_closeup.py
+# checks the wall in each shot is drawn, not black.
+# One quarter turn is 1047 mouse units at the default sensitivity.
+wait 1
+# Face -x and walk into the west wall; the player stops 0.5 from it.
+mouse 1047 0
+wait 0.3
+key down W
+wait 2
+key up W
+wait 0.5
+pos west
+shot west_facing
+# Face +z: the west wall runs down the right of the screen, nearest at the edge.
+mouse -1047 0
+wait 0.5
+shot west_along
+# Face +x and walk across the hall into the notch wall at x=10.72.
+mouse -1047 0
+wait 0.3
+key down W
+wait 4
+key up W
+wait 0.5
+pos notch
+shot notch_facing
+quit

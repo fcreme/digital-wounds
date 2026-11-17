@@ -255,6 +255,11 @@ void PostProcess::beginCapture() {
 
 void PostProcess::endAndRender(float time, const glm::mat4& projection) {
     glDisable(GL_DEPTH_TEST);
+    // Every pass below overwrites its whole target. The SSAO shaders write one channel and no
+    // alpha, so with blending on, Apple's driver kept the cleared 0 and SSAO blacked out every
+    // surface within about 2 units of the camera.
+    const GLboolean blendWasOn = glIsEnabled(GL_BLEND);
+    glDisable(GL_BLEND);
     glBindVertexArray(m_quadVao);
 
     // --- SSAO pass (at half res) ---
@@ -345,6 +350,7 @@ void PostProcess::endAndRender(float time, const glm::mat4& projection) {
 
         glBindVertexArray(0);
         glEnable(GL_DEPTH_TEST);
+        if (blendWasOn) glEnable(GL_BLEND);
         return; // Skip normal composite
     }
 
@@ -431,6 +437,7 @@ void PostProcess::endAndRender(float time, const glm::mat4& projection) {
 
     glBindVertexArray(0);
     glEnable(GL_DEPTH_TEST);
+    if (blendWasOn) glEnable(GL_BLEND);
 }
 
 void PostProcess::setFogParams(const glm::vec3& color, float start, float end, float nearPlane, float farPlane) {
